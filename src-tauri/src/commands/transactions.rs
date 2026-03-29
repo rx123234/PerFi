@@ -71,7 +71,13 @@ pub fn get_transactions(
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
+        .filter_map(|r| match r {
+            Ok(tx) => Some(tx),
+            Err(e) => {
+                eprintln!("Warning: failed to parse transaction row: {}", e);
+                None
+            }
+        })
         .collect();
 
     Ok(transactions)
@@ -84,11 +90,15 @@ pub fn update_transaction_category(
     category_id: Option<String>,
 ) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
-    conn.execute(
-        "UPDATE transactions SET category_id = ?1 WHERE id = ?2",
-        rusqlite::params![category_id, transaction_id],
-    )
-    .map_err(|e| e.to_string())?;
+    let rows = conn
+        .execute(
+            "UPDATE transactions SET category_id = ?1 WHERE id = ?2",
+            rusqlite::params![category_id, transaction_id],
+        )
+        .map_err(|e| e.to_string())?;
+    if rows == 0 {
+        return Err(format!("Transaction not found: {}", transaction_id));
+    }
     Ok(())
 }
 

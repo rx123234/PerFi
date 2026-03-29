@@ -22,9 +22,10 @@ pub fn preview_csv(
         .find(|f| f.name == format_name)
         .ok_or_else(|| format!("Unknown format: {}", format_name))?;
 
-    let transactions = csv_parser::parse_csv(&file_path, format, &account_id)?;
+    let result = csv_parser::parse_csv(&file_path, format, &account_id)?;
 
-    let preview: Vec<serde_json::Value> = transactions
+    let preview: Vec<serde_json::Value> = result
+        .transactions
         .iter()
         .take(10)
         .map(|tx| {
@@ -52,16 +53,18 @@ pub fn import_csv(
         .find(|f| f.name == format_name)
         .ok_or_else(|| format!("Unknown format: {}", format_name))?;
 
-    let parsed = csv_parser::parse_csv(&file_path, format, &account_id)?;
+    let parse_result = csv_parser::parse_csv(&file_path, format, &account_id)?;
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
     let mut imported = 0;
     let mut duplicates = 0;
     let mut categorized = 0;
-    let mut errors = Vec::new();
+    let mut errors: Vec<String> = parse_result.warnings; // Carry over parse warnings
 
-    for tx in &parsed {
-        // Check for duplicate
+    // Wrap all inserts in a transaction for performance and atomicity
+    conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
+
+    for tx in &parse_result.transactions {
         let exists: bool = conn
             .query_row(
                 "SELECT COUNT(*) > 0 FROM transactions WHERE import_hash = ?1",
@@ -98,10 +101,12 @@ pub fn import_csv(
                 }
             }
             Err(e) => {
-                errors.push(format!("Row error: {}", e));
+                errors.push(format!("Insert error: {}", e));
             }
         }
     }
+
+    conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
 
     Ok(ImportResult {
         imported,

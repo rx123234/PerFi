@@ -153,18 +153,32 @@ pub fn save_plaid_credentials(
     secret: String,
     environment: String,
 ) -> Result<(), String> {
+    if client_id.trim().is_empty() || secret.trim().is_empty() {
+        return Err("Client ID and Secret are required".to_string());
+    }
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let id = Uuid::new_v4().to_string();
 
-    conn.execute("DELETE FROM plaid_credentials", [])
-        .map_err(|e| e.to_string())?;
-    conn.execute(
-        "INSERT INTO plaid_credentials (id, client_id, secret, environment) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![id, client_id, secret, environment],
-    )
-    .map_err(|e| e.to_string())?;
-
-    Ok(())
+    // Atomic replace: delete + insert in one transaction
+    conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
+    let result = (|| {
+        conn.execute("DELETE FROM plaid_credentials", [])?;
+        conn.execute(
+            "INSERT INTO plaid_credentials (id, client_id, secret, environment) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![id, client_id, secret, environment],
+        )?;
+        Ok::<(), rusqlite::Error>(())
+    })();
+    match result {
+        Ok(()) => {
+            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+            Ok(())
+        }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e.to_string())
+        }
+    }
 }
 
 #[tauri::command]
@@ -283,8 +297,9 @@ pub async fn exchange_public_token(
 
     let accounts_result: PlaidAccountsResponse = resp.json().await.map_err(|e| e.to_string())?;
 
-    // Store accounts in DB
+    // Store accounts in DB atomically
     let conn = state.0.lock().map_err(|e| e.to_string())?;
+    conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
     let mut created_accounts = Vec::new();
 
     for plaid_acc in accounts_result.accounts {
@@ -327,6 +342,11 @@ pub async fn exchange_public_token(
             created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         });
     }
+
+    conn.execute_batch("COMMIT").map_err(|e| {
+        let _ = conn.execute_batch("ROLLBACK");
+        e.to_string()
+    })?;
 
     Ok(created_accounts)
 }
@@ -389,6 +409,7 @@ pub async fn sync_transactions(
 
         {
             let conn = state.0.lock().map_err(|e| e.to_string())?;
+            conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
 
             // Process added transactions
             for tx in &sync_result.added {
@@ -455,6 +476,8 @@ pub async fn sync_transactions(
                 rusqlite::params![sync_result.next_cursor, account_id],
             )
             .map_err(|e| e.to_string())?;
+
+            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
         }
 
         current_cursor = Some(sync_result.next_cursor);

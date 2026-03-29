@@ -34,6 +34,11 @@ pub fn create_category(
     color: Option<String>,
     parent_id: Option<String>,
 ) -> Result<Category, String> {
+    let name = name.trim().to_string();
+    if name.is_empty() {
+        return Err("Category name cannot be empty".to_string());
+    }
+
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let id = Uuid::new_v4().to_string();
 
@@ -119,6 +124,14 @@ pub fn create_category_rule(
     category_id: String,
     priority: i32,
 ) -> Result<CategoryRule, String> {
+    let pattern = pattern.trim().to_string();
+    if pattern.is_empty() {
+        return Err("Pattern cannot be empty".to_string());
+    }
+    if category_id.trim().is_empty() {
+        return Err("Category ID cannot be empty".to_string());
+    }
+
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let id = Uuid::new_v4().to_string();
 

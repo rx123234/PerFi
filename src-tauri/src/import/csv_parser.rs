@@ -116,11 +116,16 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
     ]
 }
 
+pub struct ParseResult {
+    pub transactions: Vec<ParsedTransaction>,
+    pub warnings: Vec<String>,
+}
+
 pub fn parse_csv(
     file_path: &str,
     format: &CsvFormat,
     account_id: &str,
-) -> Result<Vec<ParsedTransaction>, String> {
+) -> Result<ParseResult, String> {
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(true)
         .flexible(true)
@@ -167,17 +172,29 @@ pub fn parse_csv(
         .copied();
 
     let mut transactions = Vec::new();
+    let mut warnings = Vec::new();
 
     for (row_num, result) in reader.records().enumerate() {
-        let record = result.map_err(|e| format!("Error on row {}: {}", row_num + 1, e))?;
+        let record = match result {
+            Ok(r) => r,
+            Err(e) => {
+                warnings.push(format!("Row {}: failed to read: {}", row_num + 1, e));
+                continue;
+            }
+        };
 
         let date_str = record.get(date_idx).unwrap_or("").trim();
         if date_str.is_empty() {
             continue;
         }
 
-        let parsed_date = chrono::NaiveDate::parse_from_str(date_str, &format.date_format)
-            .map_err(|e| format!("Date parse error on row {}: {} (value: '{}')", row_num + 1, e, date_str))?;
+        let parsed_date = match chrono::NaiveDate::parse_from_str(date_str, &format.date_format) {
+            Ok(d) => d,
+            Err(e) => {
+                warnings.push(format!("Row {}: date parse error: {} (value: '{}')", row_num + 1, e, date_str));
+                continue;
+            }
+        };
         let date = parsed_date.format("%Y-%m-%d").to_string();
 
         let description = record.get(desc_idx).unwrap_or("").trim().to_string();
@@ -190,9 +207,13 @@ pub fn parse_csv(
             if val_str.is_empty() {
                 continue;
             }
-            let val: f64 = val_str
-                .parse()
-                .map_err(|e| format!("Amount parse error on row {}: {} (value: '{}')", row_num + 1, e, val_str))?;
+            let val: f64 = match val_str.parse() {
+                Ok(v) => v,
+                Err(e) => {
+                    warnings.push(format!("Row {}: amount parse error: {} (value: '{}')", row_num + 1, e, val_str));
+                    continue;
+                }
+            };
             if format.amount_inverted { -val } else { val }
         } else {
             let debit_str = debit_idx
@@ -232,5 +253,5 @@ pub fn parse_csv(
         });
     }
 
-    Ok(transactions)
+    Ok(ParseResult { transactions, warnings })
 }

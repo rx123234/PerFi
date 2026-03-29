@@ -41,6 +41,15 @@ pub fn create_account(
     institution: Option<String>,
     account_type: String,
 ) -> Result<Account, String> {
+    let name = name.trim().to_string();
+    if name.is_empty() {
+        return Err("Account name cannot be empty".to_string());
+    }
+    let account_type = account_type.trim().to_string();
+    if account_type.is_empty() {
+        return Err("Account type cannot be empty".to_string());
+    }
+
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let id = Uuid::new_v4().to_string();
 
@@ -83,9 +92,21 @@ pub fn update_account(
 #[tauri::command]
 pub fn delete_account(state: State<'_, DbState>, id: String) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM transactions WHERE account_id = ?1", [&id])
+    conn.execute_batch("BEGIN TRANSACTION")
         .map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM accounts WHERE id = ?1", [&id])
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    let result = (|| {
+        conn.execute("DELETE FROM transactions WHERE account_id = ?1", [&id])?;
+        conn.execute("DELETE FROM accounts WHERE id = ?1", [&id])?;
+        Ok::<(), rusqlite::Error>(())
+    })();
+    match result {
+        Ok(()) => {
+            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+            Ok(())
+        }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e.to_string())
+        }
+    }
 }
