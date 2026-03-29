@@ -104,6 +104,22 @@ struct PlaidRemovedTransaction {
     transaction_id: String,
 }
 
+/// Sanitize a Plaid API error response — log full details, return safe message to frontend
+fn sanitize_plaid_error(context: &str, raw_error: &str) -> String {
+    eprintln!("Plaid API error ({}): {}", context, raw_error);
+
+    // Try to extract user-friendly error_message from JSON response
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw_error) {
+        if let Some(msg) = parsed.get("error_message").and_then(|m| m.as_str()) {
+            return format!("Plaid error: {}", msg);
+        }
+        if let Some(code) = parsed.get("error_code").and_then(|c| c.as_str()) {
+            return format!("Plaid error (code: {}). Check logs for details.", code);
+        }
+    }
+    format!("{} failed. Check logs for details.", context)
+}
+
 fn get_plaid_base_url(environment: &str) -> Result<&str, String> {
     match environment {
         "sandbox" => Ok("https://sandbox.plaid.com"),
@@ -167,6 +183,8 @@ pub fn save_plaid_credentials(
     if client_id.trim().is_empty() || secret.trim().is_empty() {
         return Err("Client ID and Secret are required".to_string());
     }
+    // Validate environment before storing
+    get_plaid_base_url(&environment)?;
 
     // Store secret in OS keychain (never in SQLite)
     crate::db::store_secret("plaid-secret", &secret)?;
@@ -261,7 +279,7 @@ pub async fn create_link_token(state: State<'_, DbState>) -> Result<String, Stri
 
     if !resp.status().is_success() {
         let err_text = resp.text().await.unwrap_or_default();
-        return Err(format!("Plaid API error: {}", err_text));
+        return Err(sanitize_plaid_error("Create link token", &err_text));
     }
 
     let result: PlaidLinkTokenResponse = resp.json().await.map_err(|e| e.to_string())?;
@@ -297,7 +315,7 @@ pub async fn exchange_public_token(
 
     if !resp.status().is_success() {
         let err_text = resp.text().await.unwrap_or_default();
-        return Err(format!("Plaid API error: {}", err_text));
+        return Err(sanitize_plaid_error("Plaid API call", &err_text));
     }
 
     let exchange_result: PlaidExchangeResponse = resp.json().await.map_err(|e| e.to_string())?;
@@ -318,67 +336,82 @@ pub async fn exchange_public_token(
 
     if !resp.status().is_success() {
         let err_text = resp.text().await.unwrap_or_default();
-        return Err(format!("Plaid API error: {}", err_text));
+        return Err(sanitize_plaid_error("Plaid API call", &err_text));
     }
 
     let accounts_result: PlaidAccountsResponse = resp.json().await.map_err(|e| e.to_string())?;
 
-    // Store accounts in DB atomically
+    // Store accounts in DB atomically, then write keychain secrets after commit
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
     let mut created_accounts = Vec::new();
 
-    for plaid_acc in accounts_result.accounts {
-        let id = Uuid::new_v4().to_string();
-        let acc_type = match plaid_acc.subtype.as_deref() {
-            Some("checking") => "checking",
-            Some("savings") => "savings",
-            Some("credit card") => "credit_card",
-            _ => match plaid_acc.account_type.as_str() {
-                "depository" => "checking",
-                "credit" => "credit_card",
-                _ => "other",
-            },
-        };
+    let db_result = (|| -> Result<(), rusqlite::Error> {
+        for plaid_acc in &accounts_result.accounts {
+            let id = Uuid::new_v4().to_string();
+            let acc_type = match plaid_acc.subtype.as_deref() {
+                Some("checking") => "checking",
+                Some("savings") => "savings",
+                Some("credit card") => "credit_card",
+                _ => match plaid_acc.account_type.as_str() {
+                    "depository" => "checking",
+                    "credit" => "credit_card",
+                    _ => "other",
+                },
+            };
 
-        // Store access token in keychain, not in DB
+            conn.execute(
+                "INSERT INTO accounts (id, name, account_type, plaid_account_id, plaid_access_token, plaid_item_id, mask, source)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'plaid')",
+                rusqlite::params![
+                    id,
+                    plaid_acc.name,
+                    acc_type,
+                    plaid_acc.account_id,
+                    "keychain",
+                    exchange_result.item_id,
+                    plaid_acc.mask,
+                ],
+            )?;
+
+            created_accounts.push((id, plaid_acc.name.clone(), acc_type.to_string(),
+                plaid_acc.account_id.clone(), plaid_acc.mask.clone()));
+        }
+        Ok(())
+    })();
+
+    match db_result {
+        Ok(()) => {
+            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+        }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            return Err(e.to_string());
+        }
+    }
+    drop(conn); // Release lock before keychain I/O
+
+    // Store access tokens in keychain after successful DB commit
+    for (id, _, _, _, _) in &created_accounts {
         let keychain_key = format!("plaid-access-token-{}", id);
         crate::db::store_secret(&keychain_key, &exchange_result.access_token)?;
-
-        conn.execute(
-            "INSERT INTO accounts (id, name, account_type, plaid_account_id, plaid_access_token, plaid_item_id, mask, source)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'plaid')",
-            rusqlite::params![
-                id,
-                plaid_acc.name,
-                acc_type,
-                plaid_acc.account_id,
-                "keychain", // marker — actual token in OS keychain
-                exchange_result.item_id,
-                plaid_acc.mask,
-            ],
-        )
-        .map_err(|e| e.to_string())?;
-
-        created_accounts.push(crate::models::Account {
-            id,
-            name: plaid_acc.name,
-            institution: None,
-            account_type: acc_type.to_string(),
-            plaid_account_id: Some(plaid_acc.account_id),
-            plaid_item_id: Some(exchange_result.item_id.clone()),
-            mask: plaid_acc.mask,
-            source: "plaid".to_string(),
-            created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-        });
     }
 
-    conn.execute_batch("COMMIT").map_err(|e| {
-        let _ = conn.execute_batch("ROLLBACK");
-        e.to_string()
-    })?;
+    let accounts = created_accounts.into_iter().map(|(id, name, acc_type, plaid_acc_id, mask)| {
+        crate::models::Account {
+            id,
+            name,
+            institution: None,
+            account_type: acc_type,
+            plaid_account_id: Some(plaid_acc_id),
+            plaid_item_id: Some(exchange_result.item_id.clone()),
+            mask,
+            source: "plaid".to_string(),
+            created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        }
+    }).collect();
 
-    Ok(created_accounts)
+    Ok(accounts)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -419,8 +452,9 @@ pub async fn sync_transactions(
     let mut total_modified = 0usize;
     let mut total_removed = 0usize;
     let mut current_cursor = cursor;
+    const MAX_SYNC_PAGES: usize = 100;
 
-    loop {
+    for _page in 0..MAX_SYNC_PAGES {
         let body = PlaidSyncRequest {
             client_id: creds.client_id.clone(),
             secret: creds.secret.clone(),
@@ -438,7 +472,7 @@ pub async fn sync_transactions(
 
         if !resp.status().is_success() {
             let err_text = resp.text().await.unwrap_or_default();
-            return Err(format!("Plaid sync error: {}", err_text));
+            return Err(sanitize_plaid_error("Transaction sync", &err_text));
         }
 
         let sync_result: PlaidSyncResponse = resp.json().await.map_err(|e| e.to_string())?;
@@ -471,7 +505,9 @@ pub async fn sync_transactions(
                     ],
                 )
                 .map_err(|e| e.to_string())?;
-                total_added += 1;
+                if conn.changes() > 0 {
+                    total_added += 1;
+                }
             }
 
             // Process modified transactions

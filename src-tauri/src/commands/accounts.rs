@@ -28,7 +28,10 @@ pub fn get_accounts(state: State<'_, DbState>) -> Result<Vec<Account>, String> {
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
+        .filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse account row: {}", e); None }
+        })
         .collect();
 
     Ok(accounts)
@@ -80,12 +83,25 @@ pub fn update_account(
     institution: Option<String>,
     account_type: String,
 ) -> Result<(), String> {
+    let name = name.trim().to_string();
+    if name.is_empty() {
+        return Err("Account name cannot be empty".to_string());
+    }
+    let account_type = account_type.trim().to_string();
+    if account_type.is_empty() {
+        return Err("Account type cannot be empty".to_string());
+    }
+
     let conn = state.0.lock().map_err(|e| e.to_string())?;
-    conn.execute(
-        "UPDATE accounts SET name = ?1, institution = ?2, account_type = ?3 WHERE id = ?4",
-        rusqlite::params![name, institution, account_type, id],
-    )
-    .map_err(|e| e.to_string())?;
+    let rows = conn
+        .execute(
+            "UPDATE accounts SET name = ?1, institution = ?2, account_type = ?3 WHERE id = ?4",
+            rusqlite::params![name, institution, account_type, id],
+        )
+        .map_err(|e| e.to_string())?;
+    if rows == 0 {
+        return Err(format!("Account not found: {}", id));
+    }
     Ok(())
 }
 

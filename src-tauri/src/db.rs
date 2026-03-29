@@ -58,18 +58,18 @@ fn get_or_create_db_key(app_data_dir: &std::path::Path) -> Result<String, String
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let _ = fs::set_permissions(&key_path, fs::Permissions::from_mode(0o600));
+            fs::set_permissions(&key_path, fs::Permissions::from_mode(0o600))
+                .map_err(|e| format!("Failed to set key file permissions: {}", e))?;
         }
         Ok(key)
     }
 }
 
 fn generate_random_key() -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(uuid::Uuid::new_v4().to_string());
-    hasher.update(chrono::Utc::now().to_rfc3339());
-    format!("{:x}", hasher.finalize())
+    let mut key_bytes = [0u8; 32];
+    // Use the same CSPRNG that backs uuid::Uuid::new_v4 (getrandom)
+    getrandom::getrandom(&mut key_bytes).expect("OS CSPRNG unavailable");
+    key_bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
 pub fn initialize(db_path: &PathBuf) -> Result<Connection, String> {
@@ -104,7 +104,10 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         .map_err(|e| format!("Failed to query migrations: {}", e))?
         .query_map([], |row| row.get(0))
         .map_err(|e| format!("Failed to read migrations: {}", e))?
-        .filter_map(|r| r.ok())
+        .filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to read migration row: {}", e); None }
+        })
         .collect();
 
     if !applied.contains(&1) {

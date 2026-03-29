@@ -123,7 +123,6 @@ export interface CsvFormat {
   debit_column: string | null;
   credit_column: string | null;
   amount_inverted: boolean;
-  skip_rows: number;
 }
 
 export interface SyncResult {

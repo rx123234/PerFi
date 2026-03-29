@@ -27,20 +27,19 @@ export default function DashboardPage() {
   const [balances, setBalances] = useState<AccountBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load all dashboard data except trends (which depends on granularity)
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cf, cs, tr, sk, mc, bl] = await Promise.all([
+      const [cf, cs, sk, mc, bl] = await Promise.all([
         api.getCashFlowSummary(range.startDate, range.endDate, range.prevStartDate, range.prevEndDate),
         api.getSpendingByCategory(range.startDate, range.endDate),
-        api.getSpendingTrends(range.startDate, range.endDate, granularity),
         api.getSankeyData(range.startDate, range.endDate),
         api.getTopMerchants(range.startDate, range.endDate),
         api.getAccountBalances(),
       ]);
       setCashFlow(cf);
       setCategorySpending(cs);
-      setTrends(tr);
       setSankeyData(sk);
       setMerchants(mc);
       setBalances(bl);
@@ -49,11 +48,25 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  }, [range]);
+
+  // Load trends separately since it also depends on granularity
+  const loadTrends = useCallback(async () => {
+    try {
+      const tr = await api.getSpendingTrends(range.startDate, range.endDate, granularity);
+      setTrends(tr);
+    } catch (err) {
+      console.error("Failed to load trends:", err);
+    }
   }, [range, granularity]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    loadTrends();
+  }, [loadTrends]);
 
   return (
     <div className="space-y-6">

@@ -21,7 +21,10 @@ pub fn get_categories(state: State<'_, DbState>) -> Result<Vec<Category>, String
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
+        .filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse row: {}", e); None }
+        })
         .collect();
 
     Ok(categories)
@@ -76,16 +79,27 @@ pub fn update_category(
 #[tauri::command]
 pub fn delete_category(state: State<'_, DbState>, id: String) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
-    conn.execute(
-        "UPDATE transactions SET category_id = NULL WHERE category_id = ?1",
-        [&id],
-    )
-    .map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM category_rules WHERE category_id = ?1", [&id])
+    conn.execute_batch("BEGIN TRANSACTION")
         .map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM categories WHERE id = ?1", [&id])
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    let result = (|| {
+        conn.execute(
+            "UPDATE transactions SET category_id = NULL WHERE category_id = ?1",
+            [&id],
+        )?;
+        conn.execute("DELETE FROM category_rules WHERE category_id = ?1", [&id])?;
+        conn.execute("DELETE FROM categories WHERE id = ?1", [&id])?;
+        Ok::<(), rusqlite::Error>(())
+    })();
+    match result {
+        Ok(()) => {
+            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+            Ok(())
+        }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e.to_string())
+        }
+    }
 }
 
 #[tauri::command]
@@ -111,7 +125,10 @@ pub fn get_category_rules(state: State<'_, DbState>) -> Result<Vec<CategoryRule>
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
+        .filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse row: {}", e); None }
+        })
         .collect();
 
     Ok(rules)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import type { Transaction, Category, Account, TransactionFilter } from "@/lib/ty
 import { Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 
 const PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function TransactionList() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -17,33 +18,47 @@ export default function TransactionList() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [accountFilter, setAccountFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Debounce search input
+  useEffect(() => {
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(debounceTimer.current);
+  }, [search]);
 
   const buildFilter = useCallback((): TransactionFilter => ({
     account_id: accountFilter || null,
     category_id: categoryFilter || null,
     start_date: null,
     end_date: null,
-    search: search || null,
+    search: debouncedSearch || null,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
-  }), [accountFilter, categoryFilter, search, page]);
+  }), [accountFilter, categoryFilter, debouncedSearch, page]);
 
   const loadData = useCallback(async () => {
-    const filter = buildFilter();
-    const [txs, count, cats, accs] = await Promise.all([
-      api.getTransactions(filter),
-      api.getTransactionCount(filter),
-      api.getCategories(),
-      api.getAccounts(),
-    ]);
-    setTransactions(txs);
-    setTotalCount(count);
-    setCategories(cats);
-    setAccounts(accs);
+    try {
+      const filter = buildFilter();
+      const [txs, count, cats, accs] = await Promise.all([
+        api.getTransactions(filter),
+        api.getTransactionCount(filter),
+        api.getCategories(),
+        api.getAccounts(),
+      ]);
+      setTransactions(txs);
+      setTotalCount(count);
+      setCategories(cats);
+      setAccounts(accs);
+    } catch (err) {
+      console.error("Failed to load transactions:", err);
+    }
   }, [buildFilter]);
 
   useEffect(() => {

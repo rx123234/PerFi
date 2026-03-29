@@ -17,8 +17,12 @@ export default function AccountList() {
   const [syncing, setSyncing] = useState<string | null>(null);
 
   const loadAccounts = useCallback(async () => {
-    const accs = await api.getAccounts();
-    setAccounts(accs);
+    try {
+      const accs = await api.getAccounts();
+      setAccounts(accs);
+    } catch (err) {
+      console.error("Failed to load accounts:", err);
+    }
   }, []);
 
   useEffect(() => {

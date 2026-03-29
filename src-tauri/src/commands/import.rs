@@ -1,9 +1,22 @@
-use crate::categorize::rules::categorize_transaction;
+use crate::categorize::rules;
 use crate::db::DbState;
 use crate::import::csv_parser;
 use crate::models::ImportResult;
+use std::path::Path;
 use tauri::State;
 use uuid::Uuid;
+
+/// Validate that the file path looks like a CSV file and exists.
+fn validate_csv_path(file_path: &str) -> Result<(), String> {
+    let path = Path::new(file_path);
+    if !path.exists() {
+        return Err(format!("File not found: {}", file_path));
+    }
+    match path.extension().and_then(|e| e.to_str()) {
+        Some(ext) if ext.eq_ignore_ascii_case("csv") || ext.eq_ignore_ascii_case("tsv") => Ok(()),
+        _ => Err("Only .csv and .tsv files are supported".to_string()),
+    }
+}
 
 #[tauri::command]
 pub fn get_csv_formats() -> Vec<csv_parser::CsvFormat> {
@@ -16,6 +29,7 @@ pub fn preview_csv(
     format_name: String,
     account_id: String,
 ) -> Result<Vec<serde_json::Value>, String> {
+    validate_csv_path(&file_path)?;
     let formats = csv_parser::get_csv_formats();
     let format = formats
         .iter()
@@ -47,6 +61,7 @@ pub fn import_csv(
     account_id: String,
     format_name: String,
 ) -> Result<ImportResult, String> {
+    validate_csv_path(&file_path)?;
     let formats = csv_parser::get_csv_formats();
     let format = formats
         .iter()
@@ -60,6 +75,9 @@ pub fn import_csv(
     let mut duplicates = 0;
     let mut categorized = 0;
     let mut errors: Vec<String> = parse_result.warnings; // Carry over parse warnings
+
+    // Load categorization rules once for the entire batch
+    let cat_rules = rules::load_rules(&conn);
 
     // Wrap all inserts in a transaction for performance and atomicity
     conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
@@ -79,7 +97,7 @@ pub fn import_csv(
         }
 
         let id = Uuid::new_v4().to_string();
-        let category_id = categorize_transaction(&conn, &tx.description, &None);
+        let category_id = rules::categorize_with_rules(&cat_rules, &tx.description, &None);
 
         match conn.execute(
             "INSERT INTO transactions (id, account_id, date, amount_cents, description, import_hash, category_id, source, pending)

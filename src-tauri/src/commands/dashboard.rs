@@ -16,14 +16,20 @@ fn query_rows_3<T: rusqlite::types::FromSql + Clone, U: rusqlite::types::FromSql
                 Ok((row.get::<_, T>(0)?, row.get::<_, U>(1)?, row.get::<_, V>(2)?))
             })
             .map_err(|e| e.to_string())?;
-        mapped.filter_map(|r| r.ok()).collect()
+        mapped.filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse dashboard row: {}", e); None }
+        }).collect()
     } else {
         let mapped = stmt
             .query_map(rusqlite::params![start_date, end_date], |row| {
                 Ok((row.get::<_, T>(0)?, row.get::<_, U>(1)?, row.get::<_, V>(2)?))
             })
             .map_err(|e| e.to_string())?;
-        mapped.filter_map(|r| r.ok()).collect()
+        mapped.filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse dashboard row: {}", e); None }
+        }).collect()
     };
     Ok(rows)
 }
@@ -42,14 +48,20 @@ fn query_rows_4(
                 Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
             })
             .map_err(|e| e.to_string())?;
-        mapped.filter_map(|r| r.ok()).collect()
+        mapped.filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse dashboard row: {}", e); None }
+        }).collect()
     } else {
         let mapped = stmt
             .query_map(rusqlite::params![start_date, end_date], |row| {
                 Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
             })
             .map_err(|e| e.to_string())?;
-        mapped.filter_map(|r| r.ok()).collect()
+        mapped.filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse dashboard row: {}", e); None }
+        }).collect()
     };
     Ok(rows)
 }
@@ -330,7 +342,10 @@ pub fn get_top_merchants(
         )
         .map_err(|e| e.to_string())?;
 
-    Ok(mapped.filter_map(|r| r.ok()).collect())
+    Ok(mapped.filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse dashboard row: {}", e); None }
+        }).collect())
 }
 
 #[tauri::command]
@@ -360,5 +375,8 @@ pub fn get_account_balances(state: State<'_, DbState>) -> Result<Vec<AccountBala
         })
         .map_err(|e| e.to_string())?;
 
-    Ok(mapped.filter_map(|r| r.ok()).collect())
+    Ok(mapped.filter_map(|r| match r {
+            Ok(v) => Some(v),
+            Err(e) => { eprintln!("Warning: failed to parse dashboard row: {}", e); None }
+        }).collect())
 }

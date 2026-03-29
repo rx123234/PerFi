@@ -17,9 +17,13 @@ export default function CategoryManager() {
   const [recatCount, setRecatCount] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
-    const [cats, rs] = await Promise.all([api.getCategories(), api.getCategoryRules()]);
-    setCategories(cats);
-    setRules(rs);
+    try {
+      const [cats, rs] = await Promise.all([api.getCategories(), api.getCategoryRules()]);
+      setCategories(cats);
+      setRules(rs);
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+    }
   }, []);
 
   useEffect(() => {

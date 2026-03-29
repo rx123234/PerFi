@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { usePlaidLink } from "react-plaid-link";
 import { Button } from "@/components/ui/button";
 import * as api from "@/lib/api";
@@ -11,12 +11,14 @@ interface Props {
 export default function PlaidLinkButton({ onSuccess }: Props) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const hasOpened = useRef(false);
 
   const handleClick = async () => {
     setLoading(true);
     try {
       const token = await api.createLinkToken();
       setLinkToken(token);
+      hasOpened.current = false;
     } catch (err) {
       alert(`Failed to create link token: ${err}\n\nMake sure Plaid credentials are configured in Settings.`);
     } finally {
@@ -44,10 +46,13 @@ export default function PlaidLinkButton({ onSuccess }: Props) {
     onExit: () => setLinkToken(null),
   });
 
-  // Auto-open when link token is set
-  if (linkToken && ready) {
-    setTimeout(() => open(), 0);
-  }
+  // Auto-open Plaid Link when token is ready (in useEffect, not during render)
+  useEffect(() => {
+    if (linkToken && ready && !hasOpened.current) {
+      hasOpened.current = true;
+      open();
+    }
+  }, [linkToken, ready, open]);
 
   return (
     <Button onClick={handleClick} disabled={loading} size="sm">

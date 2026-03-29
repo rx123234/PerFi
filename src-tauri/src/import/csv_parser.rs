@@ -12,7 +12,6 @@ pub struct CsvFormat {
     pub debit_column: Option<String>,
     pub credit_column: Option<String>,
     pub amount_inverted: bool,
-    pub skip_rows: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -34,7 +33,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: None,
             credit_column: None,
             amount_inverted: true,
-            skip_rows: 0,
+
         },
         CsvFormat {
             name: "Chase Checking".to_string(),
@@ -45,7 +44,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: None,
             credit_column: None,
             amount_inverted: false,
-            skip_rows: 0,
+
         },
         CsvFormat {
             name: "Capital One Credit Card".to_string(),
@@ -56,7 +55,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: Some("Debit".to_string()),
             credit_column: Some("Credit".to_string()),
             amount_inverted: false,
-            skip_rows: 0,
+
         },
         CsvFormat {
             name: "Capital One Checking".to_string(),
@@ -67,7 +66,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: Some("Debit".to_string()),
             credit_column: Some("Credit".to_string()),
             amount_inverted: false,
-            skip_rows: 0,
+
         },
         CsvFormat {
             name: "Bank of America".to_string(),
@@ -78,7 +77,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: None,
             credit_column: None,
             amount_inverted: false,
-            skip_rows: 0,
+
         },
         CsvFormat {
             name: "American Express".to_string(),
@@ -89,7 +88,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: None,
             credit_column: None,
             amount_inverted: true,
-            skip_rows: 0,
+
         },
         CsvFormat {
             name: "Citi Credit Card".to_string(),
@@ -100,7 +99,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: Some("Debit".to_string()),
             credit_column: Some("Credit".to_string()),
             amount_inverted: false,
-            skip_rows: 0,
+
         },
         CsvFormat {
             name: "Wells Fargo".to_string(),
@@ -111,7 +110,7 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
             debit_column: None,
             credit_column: None,
             amount_inverted: false,
-            skip_rows: 0,
+
         },
     ]
 }
