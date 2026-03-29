@@ -1,5 +1,5 @@
 use crate::db::DbState;
-use crate::models::PlaidCredentials;
+use crate::models::{PlaidCredentials, PlaidCredentialsMeta};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
@@ -104,28 +104,39 @@ struct PlaidRemovedTransaction {
     transaction_id: String,
 }
 
-fn get_plaid_base_url(environment: &str) -> &str {
+fn get_plaid_base_url(environment: &str) -> Result<&str, String> {
     match environment {
-        "sandbox" => "https://sandbox.plaid.com",
-        "production" => "https://production.plaid.com",
-        _ => "https://development.plaid.com",
+        "sandbox" => Ok("https://sandbox.plaid.com"),
+        "development" => Ok("https://development.plaid.com"),
+        "production" => Ok("https://production.plaid.com"),
+        _ => Err(format!("Invalid Plaid environment: '{}'. Must be sandbox, development, or production.", environment)),
     }
 }
 
 fn get_credentials(conn: &rusqlite::Connection) -> Result<PlaidCredentials, String> {
-    conn.query_row(
-        "SELECT id, client_id, secret, environment FROM plaid_credentials LIMIT 1",
+    let db_creds = conn.query_row(
+        "SELECT id, client_id, environment FROM plaid_credentials LIMIT 1",
         [],
         |row| {
-            Ok(PlaidCredentials {
-                id: row.get(0)?,
-                client_id: row.get(1)?,
-                secret: row.get(2)?,
-                environment: row.get(3)?,
-            })
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
         },
     )
-    .map_err(|_| "Plaid credentials not configured. Go to Settings to add them.".to_string())
+    .map_err(|_| "Plaid credentials not configured. Go to Settings to add them.".to_string())?;
+
+    // Retrieve secret from OS keychain
+    let secret = crate::db::get_secret("plaid-secret")?
+        .ok_or_else(|| "Plaid secret not found in keychain. Please re-enter credentials in Settings.".to_string())?;
+
+    Ok(PlaidCredentials {
+        id: db_creds.0,
+        client_id: db_creds.1,
+        secret,
+        environment: db_creds.2,
+    })
 }
 
 fn map_plaid_category(category: &Option<PlaidCategory>) -> Option<String> {
@@ -156,16 +167,20 @@ pub fn save_plaid_credentials(
     if client_id.trim().is_empty() || secret.trim().is_empty() {
         return Err("Client ID and Secret are required".to_string());
     }
+
+    // Store secret in OS keychain (never in SQLite)
+    crate::db::store_secret("plaid-secret", &secret)?;
+
+    // Store non-sensitive metadata in DB
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let id = Uuid::new_v4().to_string();
 
-    // Atomic replace: delete + insert in one transaction
     conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
     let result = (|| {
         conn.execute("DELETE FROM plaid_credentials", [])?;
         conn.execute(
             "INSERT INTO plaid_credentials (id, client_id, secret, environment) VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![id, client_id, secret, environment],
+            rusqlite::params![id, client_id, "keychain", environment],
         )?;
         Ok::<(), rusqlite::Error>(())
     })();
@@ -182,24 +197,35 @@ pub fn save_plaid_credentials(
 }
 
 #[tauri::command]
-pub fn get_plaid_credentials(state: State<'_, DbState>) -> Result<Option<PlaidCredentials>, String> {
+pub fn get_plaid_credentials(state: State<'_, DbState>) -> Result<PlaidCredentialsMeta, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let result = conn.query_row(
-        "SELECT id, client_id, secret, environment FROM plaid_credentials LIMIT 1",
+        "SELECT client_id, environment FROM plaid_credentials LIMIT 1",
         [],
         |row| {
-            Ok(PlaidCredentials {
-                id: row.get(0)?,
-                client_id: row.get(1)?,
-                secret: row.get(2)?,
-                environment: row.get(3)?,
+            let client_id: String = row.get(0)?;
+            let environment: String = row.get(1)?;
+            // Show only last 4 chars of client_id as a hint
+            let hint = if client_id.len() > 4 {
+                format!("...{}", &client_id[client_id.len() - 4..])
+            } else {
+                "****".to_string()
+            };
+            Ok(PlaidCredentialsMeta {
+                is_configured: true,
+                environment,
+                client_id_hint: hint,
             })
         },
     );
 
     match result {
-        Ok(creds) => Ok(Some(creds)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Ok(meta) => Ok(meta),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(PlaidCredentialsMeta {
+            is_configured: false,
+            environment: "development".to_string(),
+            client_id_hint: String::new(),
+        }),
         Err(e) => Err(e.to_string()),
     }
 }
@@ -211,7 +237,7 @@ pub async fn create_link_token(state: State<'_, DbState>) -> Result<String, Stri
         get_credentials(&conn)?
     };
 
-    let base_url = get_plaid_base_url(&creds.environment);
+    let base_url = get_plaid_base_url(&creds.environment)?;
     let client = reqwest::Client::new();
 
     let body = PlaidLinkTokenRequest {
@@ -252,7 +278,7 @@ pub async fn exchange_public_token(
         get_credentials(&conn)?
     };
 
-    let base_url = get_plaid_base_url(&creds.environment);
+    let base_url = get_plaid_base_url(&creds.environment)?;
     let client = reqwest::Client::new();
 
     // Exchange public token for access token
@@ -315,6 +341,10 @@ pub async fn exchange_public_token(
             },
         };
 
+        // Store access token in keychain, not in DB
+        let keychain_key = format!("plaid-access-token-{}", id);
+        crate::db::store_secret(&keychain_key, &exchange_result.access_token)?;
+
         conn.execute(
             "INSERT INTO accounts (id, name, account_type, plaid_account_id, plaid_access_token, plaid_item_id, mask, source)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'plaid')",
@@ -323,7 +353,7 @@ pub async fn exchange_public_token(
                 plaid_acc.name,
                 acc_type,
                 plaid_acc.account_id,
-                exchange_result.access_token,
+                "keychain", // marker — actual token in OS keychain
                 exchange_result.item_id,
                 plaid_acc.mask,
             ],
@@ -366,17 +396,23 @@ pub async fn sync_transactions(
     let (creds, access_token, cursor) = {
         let conn = state.0.lock().map_err(|e| e.to_string())?;
         let creds = get_credentials(&conn)?;
-        let (access_token, cursor): (String, Option<String>) = conn
+        let cursor: Option<String> = conn
             .query_row(
-                "SELECT plaid_access_token, plaid_cursor FROM accounts WHERE id = ?1",
+                "SELECT plaid_cursor FROM accounts WHERE id = ?1",
                 [&account_id],
-                |row| Ok((row.get(0)?, row.get(1)?)),
+                |row| row.get(0),
             )
             .map_err(|e| format!("Account not found: {}", e))?;
+
+        // Retrieve access token from keychain
+        let keychain_key = format!("plaid-access-token-{}", account_id);
+        let access_token = crate::db::get_secret(&keychain_key)?
+            .ok_or_else(|| "Access token not found in keychain. Please re-link the account.".to_string())?;
+
         (creds, access_token, cursor)
     };
 
-    let base_url = get_plaid_base_url(&creds.environment);
+    let base_url = get_plaid_base_url(&creds.environment)?;
     let client = reqwest::Client::new();
 
     let mut total_added = 0usize;
@@ -415,18 +451,18 @@ pub async fn sync_transactions(
             for tx in &sync_result.added {
                 let id = Uuid::new_v4().to_string();
                 // Plaid amounts: positive = money leaving account (debit), negative = money entering (credit)
-                // We want: negative = debit, positive = credit
-                let amount = -tx.amount;
+                // We want: negative = debit, positive = credit. Store as integer cents.
+                let amount_cents = (-tx.amount * 100.0).round() as i64;
                 let category_id = map_plaid_category(&tx.personal_finance_category);
 
                 conn.execute(
-                    "INSERT OR IGNORE INTO transactions (id, account_id, date, amount, description, merchant, plaid_tx_id, category_id, source, pending)
+                    "INSERT OR IGNORE INTO transactions (id, account_id, date, amount_cents, description, merchant, plaid_tx_id, category_id, source, pending)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'plaid', ?9)",
                     rusqlite::params![
                         id,
                         account_id,
                         tx.date,
-                        amount,
+                        amount_cents,
                         tx.name,
                         tx.merchant_name,
                         tx.transaction_id,
@@ -440,15 +476,15 @@ pub async fn sync_transactions(
 
             // Process modified transactions
             for tx in &sync_result.modified {
-                let amount = -tx.amount;
+                let amount_cents = (-tx.amount * 100.0).round() as i64;
                 let category_id = map_plaid_category(&tx.personal_finance_category);
 
                 conn.execute(
-                    "UPDATE transactions SET date = ?1, amount = ?2, description = ?3, merchant = ?4, category_id = COALESCE(category_id, ?5), pending = ?6
+                    "UPDATE transactions SET date = ?1, amount_cents = ?2, description = ?3, merchant = ?4, category_id = COALESCE(category_id, ?5), pending = ?6
                      WHERE plaid_tx_id = ?7",
                     rusqlite::params![
                         tx.date,
-                        amount,
+                        amount_cents,
                         tx.name,
                         tx.merchant_name,
                         category_id,

@@ -18,7 +18,7 @@ pub struct CsvFormat {
 #[derive(Debug, Clone)]
 pub struct ParsedTransaction {
     pub date: String,
-    pub amount: f64,
+    pub amount_cents: i64,
     pub description: String,
     pub import_hash: String,
 }
@@ -202,7 +202,8 @@ pub fn parse_csv(
             continue;
         }
 
-        let amount = if let Some(idx) = amount_idx {
+        // Parse amount as f64 then convert to integer cents for precision
+        let amount_dollars = if let Some(idx) = amount_idx {
             let val_str = record.get(idx).unwrap_or("").trim().replace(['$', ','], "");
             if val_str.is_empty() {
                 continue;
@@ -230,24 +231,39 @@ pub fn parse_csv(
             let debit: f64 = if debit_str.is_empty() {
                 0.0
             } else {
-                debit_str.parse().unwrap_or(0.0)
+                match debit_str.parse() {
+                    Ok(v) => v,
+                    Err(e) => {
+                        warnings.push(format!("Row {}: debit parse error: {} (value: '{}')", row_num + 1, e, debit_str));
+                        continue;
+                    }
+                }
             };
             let credit: f64 = if credit_str.is_empty() {
                 0.0
             } else {
-                credit_str.parse().unwrap_or(0.0)
+                match credit_str.parse() {
+                    Ok(v) => v,
+                    Err(e) => {
+                        warnings.push(format!("Row {}: credit parse error: {} (value: '{}')", row_num + 1, e, credit_str));
+                        continue;
+                    }
+                }
             };
 
             credit - debit
         };
 
+        let amount_cents = (amount_dollars * 100.0).round() as i64;
+
+        // Include row_num so legitimate same-day duplicates (e.g. two $50 Starbucks) get unique hashes.
         let mut hasher = Sha256::new();
-        hasher.update(format!("{}|{}|{}|{}", account_id, date, amount, description));
+        hasher.update(format!("{}|{}|{}|{}|{}", account_id, date, amount_cents, description, row_num));
         let hash = format!("{:x}", hasher.finalize());
 
         transactions.push(ParsedTransaction {
             date,
-            amount,
+            amount_cents,
             description,
             import_hash: hash,
         });

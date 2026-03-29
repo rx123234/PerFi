@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import * as api from "@/lib/api";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, ShieldCheck } from "lucide-react";
 
 export default function PlaidSettings() {
   const [clientId, setClientId] = useState("");
@@ -11,16 +11,14 @@ export default function PlaidSettings() {
   const [environment, setEnvironment] = useState("development");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasCredentials, setHasCredentials] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [clientIdHint, setClientIdHint] = useState("");
 
   useEffect(() => {
-    api.getPlaidCredentials().then((creds) => {
-      if (creds) {
-        setClientId(creds.client_id);
-        setSecret(creds.secret);
-        setEnvironment(creds.environment);
-        setHasCredentials(true);
-      }
+    api.getPlaidCredentials().then((meta) => {
+      setIsConfigured(meta.is_configured);
+      setEnvironment(meta.environment);
+      setClientIdHint(meta.client_id_hint);
     });
   }, []);
 
@@ -33,7 +31,10 @@ export default function PlaidSettings() {
       setError(null);
       await api.savePlaidCredentials(clientId, secret, environment);
       setSaved(true);
-      setHasCredentials(true);
+      setIsConfigured(true);
+      setClientIdHint(clientId.length > 4 ? `...${clientId.slice(-4)}` : "****");
+      setClientId("");
+      setSecret("");
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       setError(String(err));
@@ -53,12 +54,24 @@ export default function PlaidSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {isConfigured && (
+            <div className="flex items-center gap-2 p-3 rounded-md bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 text-sm">
+              <ShieldCheck className="h-4 w-4" />
+              Credentials configured (Client ID: {clientIdHint}, Environment: {environment})
+            </div>
+          )}
+
+          <p className="text-sm text-muted-foreground">
+            {isConfigured ? "Enter new credentials to replace the existing ones:" : "Enter your Plaid credentials:"}
+          </p>
+
           <div>
             <label className="text-sm font-medium mb-1 block">Client ID</label>
             <Input
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               placeholder="Enter your Plaid Client ID"
+              autoComplete="off"
             />
           </div>
           <div>
@@ -68,6 +81,7 @@ export default function PlaidSettings() {
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
               placeholder="Enter your Plaid Secret"
+              autoComplete="off"
             />
           </div>
           <div>
@@ -98,7 +112,7 @@ export default function PlaidSettings() {
           )}
 
           <Button onClick={handleSave}>
-            {hasCredentials ? "Update Credentials" : "Save Credentials"}
+            {isConfigured ? "Update Credentials" : "Save Credentials"}
           </Button>
         </CardContent>
       </Card>

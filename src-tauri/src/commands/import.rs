@@ -31,7 +31,7 @@ pub fn preview_csv(
         .map(|tx| {
             serde_json::json!({
                 "date": tx.date,
-                "amount": tx.amount,
+                "amount": tx.amount_cents as f64 / 100.0,
                 "description": tx.description,
             })
         })
@@ -82,13 +82,13 @@ pub fn import_csv(
         let category_id = categorize_transaction(&conn, &tx.description, &None);
 
         match conn.execute(
-            "INSERT INTO transactions (id, account_id, date, amount, description, import_hash, category_id, source, pending)
+            "INSERT INTO transactions (id, account_id, date, amount_cents, description, import_hash, category_id, source, pending)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'csv', 0)",
             rusqlite::params![
                 id,
                 account_id,
                 tx.date,
-                tx.amount,
+                tx.amount_cents,
                 tx.description,
                 tx.import_hash,
                 category_id,

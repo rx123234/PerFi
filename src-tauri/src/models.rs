@@ -47,12 +47,22 @@ pub struct CategoryRule {
     pub priority: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Internal-only: full credentials for Plaid API calls (never sent to frontend)
+#[derive(Debug, Clone)]
 pub struct PlaidCredentials {
+    #[allow(dead_code)]
     pub id: String,
     pub client_id: String,
     pub secret: String,
     pub environment: String,
+}
+
+/// Safe to send to frontend: no secret, masked client_id
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlaidCredentialsMeta {
+    pub is_configured: bool,
+    pub environment: String,
+    pub client_id_hint: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

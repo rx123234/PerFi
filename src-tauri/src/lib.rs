@@ -14,10 +14,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            let db_path = db::get_db_path(&app.handle());
-            let conn = db::initialize(&db_path);
+            let db_path = db::get_db_path(&app.handle())
+                .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
+            let conn = db::initialize(&db_path)
+                .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
             app.manage(DbState(Mutex::new(conn)));
-            println!("PerFi database initialized at {:?}", db_path);
+            eprintln!("PerFi database initialized at {:?}", db_path);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

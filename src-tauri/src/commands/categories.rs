@@ -128,6 +128,9 @@ pub fn create_category_rule(
     if pattern.is_empty() {
         return Err("Pattern cannot be empty".to_string());
     }
+    if pattern.len() > 255 {
+        return Err("Pattern must be 255 characters or fewer".to_string());
+    }
     if category_id.trim().is_empty() {
         return Err("Category ID cannot be empty".to_string());
     }

@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     id            TEXT PRIMARY KEY,
     account_id    TEXT NOT NULL REFERENCES accounts(id),
     date          TEXT NOT NULL,
-    amount        REAL NOT NULL,
+    amount_cents  INTEGER NOT NULL,
     description   TEXT NOT NULL,
     enriched_desc TEXT,
     category_id   TEXT REFERENCES categories(id),
@@ -56,27 +56,27 @@ CREATE TABLE IF NOT EXISTS category_rules (
 );
 
 CREATE TABLE IF NOT EXISTS amazon_orders (
-    id            TEXT PRIMARY KEY,
-    order_id      TEXT NOT NULL,
-    order_date    TEXT NOT NULL,
-    item_name     TEXT NOT NULL,
-    quantity      INTEGER,
-    unit_price    REAL,
-    total_price   REAL NOT NULL,
-    category      TEXT,
-    matched_tx_id TEXT REFERENCES transactions(id),
-    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    id              TEXT PRIMARY KEY,
+    order_id        TEXT NOT NULL,
+    order_date      TEXT NOT NULL,
+    item_name       TEXT NOT NULL,
+    quantity        INTEGER,
+    unit_price_cents INTEGER,
+    total_price_cents INTEGER NOT NULL,
+    category        TEXT,
+    matched_tx_id   TEXT REFERENCES transactions(id),
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS costco_items (
-    id            TEXT PRIMARY KEY,
-    receipt_date  TEXT NOT NULL,
-    item_name     TEXT NOT NULL,
-    item_number   TEXT,
-    quantity      INTEGER,
-    price         REAL NOT NULL,
-    matched_tx_id TEXT REFERENCES transactions(id),
-    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    id              TEXT PRIMARY KEY,
+    receipt_date    TEXT NOT NULL,
+    item_name       TEXT NOT NULL,
+    item_number     TEXT,
+    quantity        INTEGER,
+    price_cents     INTEGER NOT NULL,
+    matched_tx_id   TEXT REFERENCES transactions(id),
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Seed default categories

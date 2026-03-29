@@ -69,14 +69,14 @@ pub fn get_cash_flow_summary(
         let (income, spending) = if let Some(ref acc) = account_id {
             let income: f64 = conn
                 .query_row(
-                    "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE amount > 0 AND date >= ?1 AND date <= ?2 AND account_id = ?3 AND pending = 0",
+                    "SELECT COALESCE(CAST(SUM(amount_cents) AS REAL) / 100.0, 0) FROM transactions WHERE amount_cents > 0 AND date >= ?1 AND date <= ?2 AND account_id = ?3 AND pending = 0",
                     rusqlite::params![start, end, acc],
                     |row| row.get(0),
                 )
                 .map_err(|e| e.to_string())?;
             let spending: f64 = conn
                 .query_row(
-                    "SELECT COALESCE(SUM(ABS(amount)), 0) FROM transactions WHERE amount < 0 AND date >= ?1 AND date <= ?2 AND account_id = ?3 AND pending = 0",
+                    "SELECT COALESCE(CAST(SUM(ABS(amount_cents)) AS REAL) / 100.0, 0) FROM transactions WHERE amount_cents < 0 AND date >= ?1 AND date <= ?2 AND account_id = ?3 AND pending = 0",
                     rusqlite::params![start, end, acc],
                     |row| row.get(0),
                 )
@@ -85,14 +85,14 @@ pub fn get_cash_flow_summary(
         } else {
             let income: f64 = conn
                 .query_row(
-                    "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE amount > 0 AND date >= ?1 AND date <= ?2 AND pending = 0",
+                    "SELECT COALESCE(CAST(SUM(amount_cents) AS REAL) / 100.0, 0) FROM transactions WHERE amount_cents > 0 AND date >= ?1 AND date <= ?2 AND pending = 0",
                     rusqlite::params![start, end],
                     |row| row.get(0),
                 )
                 .map_err(|e| e.to_string())?;
             let spending: f64 = conn
                 .query_row(
-                    "SELECT COALESCE(SUM(ABS(amount)), 0) FROM transactions WHERE amount < 0 AND date >= ?1 AND date <= ?2 AND pending = 0",
+                    "SELECT COALESCE(CAST(SUM(ABS(amount_cents)) AS REAL) / 100.0, 0) FROM transactions WHERE amount_cents < 0 AND date >= ?1 AND date <= ?2 AND pending = 0",
                     rusqlite::params![start, end],
                     |row| row.get(0),
                 )
@@ -126,20 +126,20 @@ pub fn get_spending_by_category(
 
     let sql = if account_id.is_some() {
         "SELECT COALESCE(t.category_id, 'cat-uncategorized'), COALESCE(c.name, 'Uncategorized'),
-                COALESCE(c.color, '#BDBDBD'), SUM(ABS(t.amount))
+                COALESCE(c.color, '#BDBDBD'), CAST(SUM(ABS(t.amount_cents)) AS REAL) / 100.0
          FROM transactions t
          LEFT JOIN categories c ON t.category_id = c.id
-         WHERE t.amount < 0 AND t.date >= ?1 AND t.date <= ?2 AND t.account_id = ?3 AND t.pending = 0
+         WHERE t.amount_cents < 0 AND t.date >= ?1 AND t.date <= ?2 AND t.account_id = ?3 AND t.pending = 0
          GROUP BY COALESCE(t.category_id, 'cat-uncategorized')
-         ORDER BY SUM(ABS(t.amount)) DESC"
+         ORDER BY CAST(SUM(ABS(t.amount_cents)) AS REAL) / 100.0 DESC"
     } else {
         "SELECT COALESCE(t.category_id, 'cat-uncategorized'), COALESCE(c.name, 'Uncategorized'),
-                COALESCE(c.color, '#BDBDBD'), SUM(ABS(t.amount))
+                COALESCE(c.color, '#BDBDBD'), CAST(SUM(ABS(t.amount_cents)) AS REAL) / 100.0
          FROM transactions t
          LEFT JOIN categories c ON t.category_id = c.id
-         WHERE t.amount < 0 AND t.date >= ?1 AND t.date <= ?2 AND t.pending = 0
+         WHERE t.amount_cents < 0 AND t.date >= ?1 AND t.date <= ?2 AND t.pending = 0
          GROUP BY COALESCE(t.category_id, 'cat-uncategorized')
-         ORDER BY SUM(ABS(t.amount)) DESC"
+         ORDER BY CAST(SUM(ABS(t.amount_cents)) AS REAL) / 100.0 DESC"
     };
 
     let rows = query_rows_4(&conn, sql, &start_date, &end_date, &account_id)?;
@@ -183,8 +183,8 @@ pub fn get_spending_trends(
 
     let sql = format!(
         "SELECT strftime('{}', t.date) as period,
-                COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN t.amount < 0 THEN ABS(t.amount) ELSE 0 END), 0) as spending
+                CAST(COALESCE(SUM(CASE WHEN t.amount_cents > 0 THEN t.amount_cents ELSE 0 END), 0) AS REAL) / 100.0 as income,
+                CAST(COALESCE(SUM(CASE WHEN t.amount_cents < 0 THEN ABS(t.amount_cents) ELSE 0 END), 0) AS REAL) / 100.0 as spending
          FROM transactions t
          WHERE {}
          GROUP BY period
@@ -196,10 +196,10 @@ pub fn get_spending_trends(
 
     let cat_sql = format!(
         "SELECT strftime('{}', t.date) as period, COALESCE(c.name, 'Uncategorized'),
-                COALESCE(c.color, '#BDBDBD'), COALESCE(SUM(ABS(t.amount)), 0)
+                COALESCE(c.color, '#BDBDBD'), COALESCE(CAST(SUM(ABS(t.amount_cents)) AS REAL) / 100.0, 0)
          FROM transactions t
          LEFT JOIN categories c ON t.category_id = c.id
-         WHERE t.amount < 0 AND {}
+         WHERE t.amount_cents < 0 AND {}
          GROUP BY period, COALESCE(c.name, 'Uncategorized')
          ORDER BY period",
         date_format, base_where
@@ -242,21 +242,21 @@ pub fn get_sankey_data(
     };
 
     let income_sql = format!(
-        "SELECT COALESCE(c.name, 'Other Income'), a.name, SUM(t.amount)
+        "SELECT COALESCE(c.name, 'Other Income'), a.name, CAST(SUM(t.amount_cents) AS REAL) / 100.0
          FROM transactions t
          JOIN accounts a ON t.account_id = a.id
          LEFT JOIN categories c ON t.category_id = c.id
-         WHERE t.amount > 0 AND {}
+         WHERE t.amount_cents > 0 AND {}
          GROUP BY COALESCE(c.name, 'Other Income'), a.name",
         base_where
     );
 
     let spending_sql = format!(
-        "SELECT a.name, COALESCE(c.name, 'Uncategorized'), SUM(ABS(t.amount))
+        "SELECT a.name, COALESCE(c.name, 'Uncategorized'), CAST(SUM(ABS(t.amount_cents)) AS REAL) / 100.0
          FROM transactions t
          JOIN accounts a ON t.account_id = a.id
          LEFT JOIN categories c ON t.category_id = c.id
-         WHERE t.amount < 0 AND {}
+         WHERE t.amount_cents < 0 AND {}
          GROUP BY a.name, COALESCE(c.name, 'Uncategorized')",
         base_where
     );
@@ -308,9 +308,9 @@ pub fn get_top_merchants(
 
     let mut stmt = conn
         .prepare(
-            "SELECT COALESCE(merchant, description) as m, SUM(ABS(amount)) as total, COUNT(*) as cnt
+            "SELECT COALESCE(merchant, description) as m, CAST(SUM(ABS(amount_cents)) AS REAL) / 100.0 as total, COUNT(*) as cnt
              FROM transactions
-             WHERE amount < 0 AND date >= ?1 AND date <= ?2 AND (?3 IS NULL OR account_id = ?3) AND pending = 0
+             WHERE amount_cents < 0 AND date >= ?1 AND date <= ?2 AND (?3 IS NULL OR account_id = ?3) AND pending = 0
              GROUP BY m
              ORDER BY total DESC
              LIMIT ?4",
@@ -339,7 +339,7 @@ pub fn get_account_balances(state: State<'_, DbState>) -> Result<Vec<AccountBala
     let mut stmt = conn
         .prepare(
             "SELECT a.id, a.name, a.account_type, a.institution, a.mask,
-                    COALESCE(SUM(t.amount), 0) as balance
+                    COALESCE(CAST(SUM(t.amount_cents) AS REAL) / 100.0, 0) as balance
              FROM accounts a
              LEFT JOIN transactions t ON a.id = t.account_id AND t.pending = 0
              GROUP BY a.id

@@ -41,11 +41,10 @@ export interface CategoryRule {
   priority: number;
 }
 
-export interface PlaidCredentials {
-  id: string;
-  client_id: string;
-  secret: string;
+export interface PlaidCredentialsMeta {
+  is_configured: boolean;
   environment: string;
+  client_id_hint: string;
 }
 
 export interface CashFlowSummary {

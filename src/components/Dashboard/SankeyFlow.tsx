@@ -80,6 +80,10 @@ export default function SankeyFlow({ data }: Props) {
       text.textContent = `${node.name} (${formatCurrency(node.value ?? 0)})`;
       nodeGroup.appendChild(text);
     }
+
+    return () => {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+    };
   }, [data]);
 
   if (!data || data.nodes.length === 0) {

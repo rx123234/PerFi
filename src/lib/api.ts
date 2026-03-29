@@ -9,7 +9,7 @@ import type {
   CsvFormat,
   ImportResult,
   MerchantSpending,
-  PlaidCredentials,
+  PlaidCredentialsMeta,
   SankeyData,
   SyncResult,
   Transaction,
@@ -82,7 +82,7 @@ export const getAccountBalances = () => invoke<AccountBalance[]>("get_account_ba
 // Plaid
 export const savePlaidCredentials = (clientId: string, secret: string, environment: string) =>
   invoke<void>("save_plaid_credentials", { clientId, secret, environment });
-export const getPlaidCredentials = () => invoke<PlaidCredentials | null>("get_plaid_credentials");
+export const getPlaidCredentials = () => invoke<PlaidCredentialsMeta>("get_plaid_credentials");
 export const createLinkToken = () => invoke<string>("create_link_token");
 export const exchangePublicToken = (publicToken: string) =>
   invoke<Account[]>("exchange_public_token", { publicToken });

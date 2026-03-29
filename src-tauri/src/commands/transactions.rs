@@ -10,7 +10,7 @@ pub fn get_transactions(
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
     let mut sql = String::from(
-        "SELECT t.id, t.account_id, t.date, t.amount, t.description, t.enriched_desc,
+        "SELECT t.id, t.account_id, t.date, CAST(t.amount_cents AS REAL) / 100.0, t.description, t.enriched_desc,
                 t.category_id, c.name as category_name, t.merchant, t.source, t.pending, t.created_at
          FROM transactions t
          LEFT JOIN categories c ON t.category_id = c.id
@@ -43,12 +43,13 @@ pub fn get_transactions(
 
     sql.push_str(" ORDER BY t.date DESC, t.created_at DESC");
 
-    if let Some(limit) = filter.limit {
-        sql.push_str(&format!(" LIMIT {}", limit));
-    }
-    if let Some(offset) = filter.offset {
-        sql.push_str(&format!(" OFFSET {}", offset));
-    }
+    // Enforce bounds on LIMIT/OFFSET to prevent abuse
+    let limit = filter.limit.unwrap_or(50).max(1).min(10000);
+    let offset = filter.offset.unwrap_or(0).max(0);
+    sql.push_str(" LIMIT ?");
+    params.push(Box::new(limit));
+    sql.push_str(" OFFSET ?");
+    params.push(Box::new(offset));
 
     let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
