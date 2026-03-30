@@ -475,10 +475,11 @@ pub async fn sync_all_accounts(
         let mut stmt = conn
             .prepare("SELECT id FROM accounts WHERE source = 'teller'")
             .map_err(|e| e.to_string())?;
-        stmt.query_map([], |row| row.get(0))
+        let ids: Vec<String> = stmt.query_map([], |row| row.get(0))
             .map_err(|e| e.to_string())?
             .filter_map(|r| r.ok())
-            .collect()
+            .collect();
+        ids
     };
 
     let mut results = Vec::new();

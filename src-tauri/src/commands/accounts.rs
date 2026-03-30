@@ -8,7 +8,7 @@ pub fn get_accounts(state: State<'_, DbState>) -> Result<Vec<Account>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
         .prepare(
-            "SELECT id, name, institution, account_type, plaid_account_id, plaid_item_id, mask, source, created_at
+            "SELECT id, name, institution, account_type, teller_account_id, teller_enrollment_id, mask, source, created_at
              FROM accounts ORDER BY created_at DESC",
         )
         .map_err(|e| e.to_string())?;
@@ -20,8 +20,8 @@ pub fn get_accounts(state: State<'_, DbState>) -> Result<Vec<Account>, String> {
                 name: row.get(1)?,
                 institution: row.get(2)?,
                 account_type: row.get(3)?,
-                plaid_account_id: row.get(4)?,
-                plaid_item_id: row.get(5)?,
+                teller_account_id: row.get(4)?,
+                teller_enrollment_id: row.get(5)?,
                 mask: row.get(6)?,
                 source: row.get(7)?,
                 created_at: row.get(8)?,
@@ -67,8 +67,8 @@ pub fn create_account(
         name,
         institution,
         account_type,
-        plaid_account_id: None,
-        plaid_item_id: None,
+        teller_account_id: None,
+        teller_enrollment_id: None,
         mask: None,
         source: "manual".to_string(),
         created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),

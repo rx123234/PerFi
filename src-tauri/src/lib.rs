@@ -47,13 +47,12 @@ pub fn run() {
             commands::dashboard::get_sankey_data,
             commands::dashboard::get_top_merchants,
             commands::dashboard::get_account_balances,
-            // Plaid
-            commands::plaid::save_plaid_credentials,
-            commands::plaid::get_plaid_credentials,
-            commands::plaid::create_link_token,
-            commands::plaid::exchange_public_token,
-            commands::plaid::sync_transactions,
-            commands::plaid::sync_all_accounts,
+            // Teller
+            commands::teller::save_teller_config,
+            commands::teller::get_teller_config,
+            commands::teller::teller_connect_success,
+            commands::teller::sync_transactions,
+            commands::teller::sync_all_accounts,
             // Import
             commands::import::get_csv_formats,
             commands::import::preview_csv,
