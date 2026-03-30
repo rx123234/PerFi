@@ -5,7 +5,7 @@ import TransactionList from "./components/Transactions/TransactionList";
 import AccountList from "./components/Accounts/AccountList";
 import CategoryManager from "./components/Categories/CategoryManager";
 import CsvImport from "./components/Import/CsvImport";
-import PlaidSettings from "./components/Settings/PlaidSettings";
+import TellerSettings from "./components/Settings/TellerSettings";
 
 function App() {
   return (
@@ -16,7 +16,7 @@ function App() {
         <Route path="/accounts" element={<AccountList />} />
         <Route path="/categories" element={<CategoryManager />} />
         <Route path="/import" element={<CsvImport />} />
-        <Route path="/settings" element={<PlaidSettings />} />
+        <Route path="/settings" element={<TellerSettings />} />
       </Route>
     </Routes>
   );

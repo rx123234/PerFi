@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import * as api from "@/lib/api";
 import type { Account } from "@/lib/types";
 import { Plus, Trash2, CreditCard, Landmark, RefreshCw, Link } from "lucide-react";
-import PlaidLinkButton from "./PlaidLink";
+import TellerConnectButton from "./TellerConnect";
 
 export default function AccountList() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -62,7 +62,7 @@ export default function AccountList() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Accounts</h2>
         <div className="flex gap-2">
-          <PlaidLinkButton onSuccess={loadAccounts} />
+          <TellerConnectButton onSuccess={loadAccounts} />
           <Button onClick={() => setShowAdd(!showAdd)} size="sm" variant="outline">
             <Plus className="h-4 w-4" />
             Manual
@@ -118,16 +118,16 @@ export default function AccountList() {
                       {acc.mask ? ` ****${acc.mask}` : ""}
                     </p>
                   </div>
-                  <Badge variant={acc.source === "plaid" ? "default" : "secondary"}>
-                    {acc.source === "plaid" ? (
-                      <><Link className="h-3 w-3 mr-1" /> Plaid</>
+                  <Badge variant={acc.source === "teller" ? "default" : "secondary"}>
+                    {acc.source === "teller" ? (
+                      <><Link className="h-3 w-3 mr-1" /> Teller</>
                     ) : (
                       "Manual"
                     )}
                   </Badge>
                 </div>
                 <div className="flex gap-2">
-                  {acc.source === "plaid" && (
+                  {acc.source === "teller" && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -150,7 +150,7 @@ export default function AccountList() {
         {accounts.length === 0 && (
           <Card>
             <CardContent className="p-8 text-center text-muted-foreground">
-              No accounts yet. Link a bank via Plaid or add a manual account.
+              No accounts yet. Link a bank via Teller or add a manual account.
             </CardContent>
           </Card>
         )}
