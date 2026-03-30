@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.plaid.com"
+      "csp": "default-src 'self'; script-src 'self' https://cdn.teller.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.teller.io; frame-src https://connect.teller.io"
     }
   }
 }
