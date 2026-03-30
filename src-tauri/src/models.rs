@@ -6,8 +6,8 @@ pub struct Account {
     pub name: String,
     pub institution: Option<String>,
     pub account_type: String,
-    pub plaid_account_id: Option<String>,
-    pub plaid_item_id: Option<String>,
+    pub teller_account_id: Option<String>,
+    pub teller_enrollment_id: Option<String>,
     pub mask: Option<String>,
     pub source: String,
     pub created_at: String,
@@ -47,22 +47,21 @@ pub struct CategoryRule {
     pub priority: i32,
 }
 
-/// Internal-only: full credentials for Plaid API calls (never sent to frontend)
+/// Internal-only: full Teller config for API calls (never sent to frontend)
 #[derive(Debug, Clone)]
-pub struct PlaidCredentials {
-    #[allow(dead_code)]
-    pub id: String,
-    pub client_id: String,
-    pub secret: String,
+pub struct TellerConfig {
+    pub app_id: String,
     pub environment: String,
+    pub cert_path: String,
+    pub key_path: String,
 }
 
-/// Safe to send to frontend: no secret, masked client_id
+/// Safe to send to frontend — no cert paths, app_id is public
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlaidCredentialsMeta {
+pub struct TellerConfigMeta {
     pub is_configured: bool,
     pub environment: String,
-    pub client_id_hint: String,
+    pub app_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
