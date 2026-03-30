@@ -1,4 +1,7 @@
--- Replace plaid_credentials with teller_config
+BEGIN;
+
+-- plaid_credentials is intentionally dropped: Plaid is replaced by Teller.
+-- Any stored Plaid credentials become irrelevant after this migration.
 DROP TABLE IF EXISTS plaid_credentials;
 
 CREATE TABLE IF NOT EXISTS teller_config (
@@ -22,3 +25,5 @@ ALTER TABLE transactions RENAME COLUMN plaid_tx_id TO teller_tx_id;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_teller_id
     ON accounts(teller_account_id)
     WHERE teller_account_id IS NOT NULL;
+
+COMMIT;
