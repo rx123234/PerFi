@@ -26,8 +26,6 @@ struct TellerInstitution {
 #[derive(Deserialize)]
 struct TellerTransaction {
     id: String,
-    #[allow(dead_code)]
-    account_id: String,
     amount: String,
     date: String,
     description: String,
@@ -314,9 +312,18 @@ pub async fn teller_connect_success(
     }
     drop(conn);
 
-    // Store access token in keychain keyed by enrollment_id
+    // Store access token in keychain keyed by enrollment_id.
+    // If this fails, clean up the DB rows so the user can re-enroll.
     let keychain_key = format!("teller-access-token-{}", enrollment_id);
-    crate::db::store_secret(&keychain_key, &access_token)?;
+    if let Err(e) = crate::db::store_secret(&keychain_key, &access_token) {
+        // Best-effort cleanup: delete the accounts we just inserted so re-enrollment works
+        let conn = state.0.lock().map_err(|e| e.to_string())?;
+        let _ = conn.execute(
+            "DELETE FROM accounts WHERE teller_enrollment_id = ?1 AND source = 'teller'",
+            rusqlite::params![enrollment_id],
+        );
+        return Err(format!("Failed to store access token securely: {}. Please try linking again.", e));
+    }
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let accounts = created
@@ -362,16 +369,18 @@ pub async fn sync_transactions(
 
     let client = build_teller_client(&config.cert_path, &config.key_path)?;
 
-    let mut url = format!(
-        "https://api.teller.io/accounts/{}/transactions?count=250",
+    let base_url = format!(
+        "https://api.teller.io/accounts/{}/transactions",
         teller_account_id
     );
+    let mut query_params: Vec<(&str, String)> = vec![("count", "250".to_string())];
     if let Some(from_id) = &last_tx_id {
-        url.push_str(&format!("&from_id={}", from_id));
+        query_params.push(("from_id", from_id.clone()));
     }
 
     let resp = client
-        .get(&url)
+        .get(&base_url)
+        .query(&query_params)
         .basic_auth(&access_token, Some(""))
         .send()
         .await
@@ -402,6 +411,9 @@ pub async fn sync_transactions(
                 .amount
                 .parse()
                 .map_err(|e| format!("Invalid amount '{}': {}", tx.amount, e))?;
+            if !amount.is_finite() {
+                return Err(format!("Invalid transaction amount: '{}'", tx.amount));
+            }
             let amount_cents = (amount * 100.0).round() as i64;
             let category_id = map_teller_category(&tx.details.category);
             let merchant = tx.details.counterparty.as_ref().and_then(|c| c.name.clone());
