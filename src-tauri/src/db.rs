@@ -76,12 +76,6 @@ pub fn initialize(db_path: &PathBuf) -> Result<Connection, String> {
     let conn = Connection::open(db_path)
         .map_err(|e| format!("Failed to open database at {:?}: {}", db_path, e))?;
 
-    // Set SQLCipher encryption key
-    let app_data_dir = db_path.parent().ok_or("Invalid db path")?;
-    let db_key = get_or_create_db_key(app_data_dir)?;
-    conn.pragma_update(None, "key", &db_key)
-        .map_err(|e| format!("Failed to set encryption key: {}", e))?;
-
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
         .map_err(|e| format!("Failed to set database pragmas: {}", e))?;
 
@@ -120,6 +114,18 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         )
         .map_err(|e| format!("Failed to record migration: {}", e))?;
         eprintln!("Applied migration 001_initial.sql");
+    }
+
+    if !applied.contains(&2) {
+        let migration = include_str!("../migrations/002_teller.sql");
+        conn.execute_batch(migration)
+            .map_err(|e| format!("Failed to run migration 002: {}", e))?;
+        conn.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?1)",
+            [2],
+        )
+        .map_err(|e| format!("Failed to record migration: {}", e))?;
+        eprintln!("Applied migration 002_teller.sql");
     }
 
     Ok(())
