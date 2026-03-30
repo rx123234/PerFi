@@ -3,8 +3,8 @@ export interface Account {
   name: string;
   institution: string | null;
   account_type: string;
-  plaid_account_id: string | null;
-  plaid_item_id: string | null;
+  teller_account_id: string | null;
+  teller_enrollment_id: string | null;
   mask: string | null;
   source: string;
   created_at: string;
@@ -41,10 +41,10 @@ export interface CategoryRule {
   priority: number;
 }
 
-export interface PlaidCredentialsMeta {
+export interface TellerConfigMeta {
   is_configured: boolean;
   environment: string;
-  client_id_hint: string;
+  app_id: string;
 }
 
 export interface CashFlowSummary {

@@ -9,7 +9,7 @@ import type {
   CsvFormat,
   ImportResult,
   MerchantSpending,
-  PlaidCredentialsMeta,
+  TellerConfigMeta,
   SankeyData,
   SyncResult,
   Transaction,
@@ -79,13 +79,12 @@ export const getTopMerchants = (startDate: string, endDate: string, limit?: numb
 
 export const getAccountBalances = () => invoke<AccountBalance[]>("get_account_balances");
 
-// Plaid
-export const savePlaidCredentials = (clientId: string, secret: string, environment: string) =>
-  invoke<void>("save_plaid_credentials", { clientId, secret, environment });
-export const getPlaidCredentials = () => invoke<PlaidCredentialsMeta>("get_plaid_credentials");
-export const createLinkToken = () => invoke<string>("create_link_token");
-export const exchangePublicToken = (publicToken: string) =>
-  invoke<Account[]>("exchange_public_token", { publicToken });
+// Teller
+export const saveTellerConfig = (appId: string, environment: string, certPath: string, keyPath: string) =>
+  invoke<void>("save_teller_config", { appId, environment, certPath, keyPath });
+export const getTellerConfig = () => invoke<TellerConfigMeta>("get_teller_config");
+export const tellerConnectSuccess = (accessToken: string, enrollmentId: string) =>
+  invoke<Account[]>("teller_connect_success", { accessToken, enrollmentId });
 export const syncTransactions = (accountId: string) =>
   invoke<SyncResult>("sync_transactions", { accountId });
 export const syncAllAccounts = () =>
