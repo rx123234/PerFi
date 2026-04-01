@@ -1,52 +1,110 @@
 import { Outlet, NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
-  ArrowLeftRight,
+  PieChart,
+  CreditCard,
+  GitBranch,
   Landmark,
-  Tags,
-  Upload,
   Settings,
+  Sun,
+  Moon,
+  BarChart3,
+  CalendarClock,
 } from "lucide-react";
+import { Tooltip } from "./ui/tooltip";
+import { useState } from "react";
+import { getTheme, toggleTheme } from "@/lib/theme";
 
 const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/transactions", icon: ArrowLeftRight, label: "Transactions" },
+  { to: "/", icon: PieChart, label: "Home" },
+  { to: "/transactions", icon: CreditCard, label: "Transactions" },
+  { to: "/spending", icon: BarChart3, label: "Spending" },
+  { to: "/fixed-costs", icon: CalendarClock, label: "Fixed Costs" },
+  { to: "/money-flow", icon: GitBranch, label: "Money Flow" },
   { to: "/accounts", icon: Landmark, label: "Accounts" },
-  { to: "/categories", icon: Tags, label: "Categories" },
-  { to: "/import", icon: Upload, label: "Import" },
-  { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function Layout() {
+  const [theme, setTheme] = useState(getTheme);
+
+  const handleThemeToggle = () => {
+    const next = toggleTheme();
+    setTheme(next);
+  };
+
   return (
-    <div className="flex h-screen">
-      <aside className="w-56 border-r bg-muted/30 flex flex-col">
-        <div className="p-4 border-b">
-          <h1 className="text-xl font-bold">PerFi</h1>
-          <p className="text-xs text-muted-foreground">Personal Finance</p>
+    <div className="flex h-screen bg-background">
+      {/* Icon Nav Rail */}
+      <nav className="flex flex-col items-center w-[68px] bg-nav border-r border-border py-4 shrink-0">
+        {/* Logo */}
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm mb-6">
+          P
         </div>
-        <nav className="flex-1 p-2 space-y-1">
+
+        {/* Main nav items */}
+        <div className="flex flex-col items-center gap-1 flex-1">
           {navItems.map(({ to, icon: Icon, label }) => (
+            <Tooltip key={to} content={label} side="right">
+              <NavLink
+                to={to}
+                end={to === "/"}
+                className={({ isActive }) =>
+                  `relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
+                    isActive
+                      ? "bg-nav-active text-foreground"
+                      : "text-muted-foreground hover:bg-nav-active hover:text-foreground"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-foreground rounded-r-full" />
+                    )}
+                    <Icon className="h-[18px] w-[18px]" />
+                  </>
+                )}
+              </NavLink>
+            </Tooltip>
+          ))}
+        </div>
+
+        {/* Bottom actions */}
+        <div className="flex flex-col items-center gap-1">
+          <Tooltip content={theme === "dark" ? "Light mode" : "Dark mode"} side="right">
+            <button
+              onClick={handleThemeToggle}
+              className="flex items-center justify-center w-10 h-10 rounded-lg text-muted-foreground hover:bg-nav-active hover:text-foreground transition-colors"
+            >
+              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            </button>
+          </Tooltip>
+          <Tooltip content="Settings" side="right">
             <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
+              to="/settings"
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                `relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-nav-active text-foreground"
+                    : "text-muted-foreground hover:bg-nav-active hover:text-foreground"
                 }`
               }
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-foreground rounded-r-full" />
+                  )}
+                  <Settings className="h-[18px] w-[18px]" />
+                </>
+              )}
             </NavLink>
-          ))}
-        </nav>
-      </aside>
+          </Tooltip>
+        </div>
+      </nav>
+
+      {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-6">
+        <div className="max-w-6xl mx-auto p-6">
           <Outlet />
         </div>
       </main>

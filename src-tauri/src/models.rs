@@ -142,6 +142,40 @@ pub struct ImportResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpendingCategory {
+    pub name: String,
+    pub color: String,
+    pub amounts: Vec<f64>,
+    pub total: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpendingBreakdown {
+    pub months: Vec<String>,
+    pub categories: Vec<SpendingCategory>,
+    pub monthly_totals: Vec<f64>,
+    pub grand_total: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FixedCostItem {
+    pub merchant: String,
+    pub category: String,
+    pub color: String,
+    pub amounts: Vec<Option<f64>>,
+    pub avg_amount: f64,
+    pub frequency: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FixedCostsAnalysis {
+    pub months: Vec<String>,
+    pub items: Vec<FixedCostItem>,
+    pub monthly_totals: Vec<f64>,
+    pub total_monthly_avg: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionFilter {
     pub account_id: Option<String>,
     pub category_id: Option<String>,

@@ -63,8 +63,6 @@ export default function CategoryManager() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Categories & Rules</h2>
-
       <div className="grid grid-cols-2 gap-6">
         {/* Categories */}
         <Card>
@@ -118,7 +116,7 @@ export default function CategoryManager() {
           </CardHeader>
           <CardContent className="space-y-3">
             {recatCount !== null && (
-              <p className="text-sm text-green-600">{recatCount} transactions re-categorized</p>
+              <p className="text-sm text-success">{recatCount} transactions re-categorized</p>
             )}
             <div className="flex gap-2">
               <Input
@@ -130,7 +128,7 @@ export default function CategoryManager() {
               <select
                 value={newRuleCategoryId}
                 onChange={(e) => setNewRuleCategoryId(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                className="h-9 rounded-lg border border-border bg-secondary/50 px-2 text-sm text-foreground"
               >
                 <option value="">Category...</option>
                 {categories.map((c) => (

@@ -1,0 +1,28 @@
+<h2>What should the default theme be?</h2>
+<p class="subtitle">Maybe uses a dark theme by default. What's your preference for PerFi?</p>
+
+<div class="options">
+  <div class="option" data-choice="dark-default" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Dark by Default (like Maybe)</h3>
+      <p>Near-black backgrounds (#0B0B0B), light text, subtle alpha-based borders. Professional finance-app feel. Light mode available as toggle.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="system-default" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Follow System Preference</h3>
+      <p>Respect the OS dark/light mode setting via <code>prefers-color-scheme</code>. Users get whichever matches their system. Manual override available.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="dark-only" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Dark Only (no light mode)</h3>
+      <p>Simplify by only supporting dark mode. Less CSS to maintain, one consistent look. Maybe's design system is clearly optimized for dark.</p>
+    </div>
+  </div>
+</div>

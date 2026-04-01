@@ -66,17 +66,14 @@ export default function CsvImport() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Import CSV</h2>
-
       <Card>
         <CardContent className="p-6 space-y-4">
-          {/* Step 1: Select Account */}
           <div>
-            <label className="text-sm font-medium mb-1 block">1. Select Account</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">1. Select Account</label>
             <select
               value={selectedAccount}
               onChange={(e) => setSelectedAccount(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 w-full rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground"
             >
               <option value="">Choose an account...</option>
               {accounts.map((a) => (
@@ -85,13 +82,12 @@ export default function CsvImport() {
             </select>
           </div>
 
-          {/* Step 2: Select Format */}
           <div>
-            <label className="text-sm font-medium mb-1 block">2. Select Bank Format</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">2. Select Bank Format</label>
             <select
               value={selectedFormat}
               onChange={(e) => setSelectedFormat(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 w-full rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground"
             >
               <option value="">Choose a format...</option>
               {formats.map((f) => (
@@ -100,13 +96,12 @@ export default function CsvImport() {
             </select>
           </div>
 
-          {/* Step 3: Select File */}
           <div>
-            <label className="text-sm font-medium mb-1 block">3. Select CSV File</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">3. Select CSV File</label>
             <div className="flex gap-2">
               <Button onClick={handleSelectFile} variant="outline" className="flex-1">
                 <Upload className="h-4 w-4" />
-                {filePath ? filePath.split("/").pop() : "Choose file..."}
+                {filePath ? filePath.split("/").pop() || filePath.split("\\").pop() : "Choose file..."}
               </Button>
               <Button
                 onClick={handlePreview}
@@ -119,31 +114,30 @@ export default function CsvImport() {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded">
+            <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
           )}
 
-          {/* Preview */}
           {preview && (
             <div>
-              <label className="text-sm font-medium mb-1 block">Preview (first 10 rows)</label>
-              <div className="border rounded overflow-auto max-h-64">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Preview (first 10 rows)</label>
+              <div className="border border-border rounded-lg overflow-auto max-h-64">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="p-2 text-left">Date</th>
-                      <th className="p-2 text-left">Description</th>
-                      <th className="p-2 text-right">Amount</th>
+                    <tr className="border-b border-border bg-secondary/50">
+                      <th className="p-2 text-left text-xs font-medium text-muted-foreground">Date</th>
+                      <th className="p-2 text-left text-xs font-medium text-muted-foreground">Description</th>
+                      <th className="p-2 text-right text-xs font-medium text-muted-foreground">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {preview.map((row, i) => (
-                      <tr key={i} className="border-b">
+                      <tr key={i} className="border-b border-border">
                         <td className="p-2">{String(row.date)}</td>
                         <td className="p-2">{String(row.description)}</td>
-                        <td className={`p-2 text-right ${(row.amount as number) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        <td className={`p-2 text-right ${(row.amount as number) >= 0 ? "text-success" : "text-destructive"}`}>
                           {formatCurrency(row.amount as number)}
                         </td>
                       </tr>
@@ -157,17 +151,16 @@ export default function CsvImport() {
             </div>
           )}
 
-          {/* Result */}
           {result && (
-            <div className="flex items-start gap-2 text-sm bg-green-50 p-4 rounded">
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+            <div className="flex items-start gap-2 text-sm bg-success/10 p-4 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-success mt-0.5" />
               <div>
-                <p className="font-medium text-green-800">Import Complete</p>
+                <p className="font-medium text-success">Import Complete</p>
                 <p>{result.imported} transactions imported</p>
                 <p>{result.duplicates} duplicates skipped</p>
                 <p>{result.categorized} auto-categorized</p>
                 {result.errors.length > 0 && (
-                  <p className="text-red-600">{result.errors.length} errors</p>
+                  <p className="text-destructive">{result.errors.length} errors</p>
                 )}
               </div>
             </div>

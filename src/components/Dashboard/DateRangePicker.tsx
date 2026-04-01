@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   startOfWeek,
@@ -8,12 +9,18 @@ import {
   endOfQuarter,
   startOfYear,
   endOfYear,
+  addMonths,
+  addQuarters,
+  addYears,
+  addWeeks,
   subMonths,
   subQuarters,
   subYears,
   subWeeks,
   format,
+  getQuarter,
 } from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export type DateRange = {
   startDate: string;
@@ -25,34 +32,33 @@ export type DateRange = {
 
 type Preset = "week" | "month" | "quarter" | "year";
 
-function getRange(preset: Preset): DateRange {
-  const now = new Date();
+function getRangeForAnchor(preset: Preset, anchor: Date): DateRange {
   let start: Date, end: Date, prevStart: Date, prevEnd: Date;
 
   switch (preset) {
     case "week":
-      start = startOfWeek(now);
-      end = endOfWeek(now);
-      prevStart = startOfWeek(subWeeks(now, 1));
-      prevEnd = endOfWeek(subWeeks(now, 1));
+      start = startOfWeek(anchor);
+      end = endOfWeek(anchor);
+      prevStart = startOfWeek(subWeeks(anchor, 1));
+      prevEnd = endOfWeek(subWeeks(anchor, 1));
       break;
     case "month":
-      start = startOfMonth(now);
-      end = endOfMonth(now);
-      prevStart = startOfMonth(subMonths(now, 1));
-      prevEnd = endOfMonth(subMonths(now, 1));
+      start = startOfMonth(anchor);
+      end = endOfMonth(anchor);
+      prevStart = startOfMonth(subMonths(anchor, 1));
+      prevEnd = endOfMonth(subMonths(anchor, 1));
       break;
     case "quarter":
-      start = startOfQuarter(now);
-      end = endOfQuarter(now);
-      prevStart = startOfQuarter(subQuarters(now, 1));
-      prevEnd = endOfQuarter(subQuarters(now, 1));
+      start = startOfQuarter(anchor);
+      end = endOfQuarter(anchor);
+      prevStart = startOfQuarter(subQuarters(anchor, 1));
+      prevEnd = endOfQuarter(subQuarters(anchor, 1));
       break;
     case "year":
-      start = startOfYear(now);
-      end = endOfYear(now);
-      prevStart = startOfYear(subYears(now, 1));
-      prevEnd = endOfYear(subYears(now, 1));
+      start = startOfYear(anchor);
+      end = endOfYear(anchor);
+      prevStart = startOfYear(subYears(anchor, 1));
+      prevEnd = endOfYear(subYears(anchor, 1));
       break;
   }
 
@@ -65,31 +71,103 @@ function getRange(preset: Preset): DateRange {
   };
 }
 
+function getRange(preset: Preset): DateRange {
+  return getRangeForAnchor(preset, new Date());
+}
+
+function formatPeriodLabel(preset: Preset, anchor: Date): string {
+  switch (preset) {
+    case "week": {
+      const s = startOfWeek(anchor);
+      const e = endOfWeek(anchor);
+      return `${format(s, "MMM d")} – ${format(e, "MMM d, yyyy")}`;
+    }
+    case "month":
+      return format(anchor, "MMMM yyyy");
+    case "quarter":
+      return `Q${getQuarter(anchor)} ${format(anchor, "yyyy")}`;
+    case "year":
+      return format(anchor, "yyyy");
+  }
+}
+
+function shiftAnchor(preset: Preset, anchor: Date, direction: -1 | 1): Date {
+  switch (preset) {
+    case "week":
+      return direction === 1 ? addWeeks(anchor, 1) : subWeeks(anchor, 1);
+    case "month":
+      return direction === 1 ? addMonths(anchor, 1) : subMonths(anchor, 1);
+    case "quarter":
+      return direction === 1 ? addQuarters(anchor, 1) : subQuarters(anchor, 1);
+    case "year":
+      return direction === 1 ? addYears(anchor, 1) : subYears(anchor, 1);
+  }
+}
+
 interface Props {
   selected: string;
   onChange: (range: DateRange) => void;
 }
 
 export default function DateRangePicker({ selected, onChange }: Props) {
+  const [anchor, setAnchor] = useState(new Date());
+  const preset = (selected as Preset) || "month";
+
   const presets: { key: Preset; label: string }[] = [
-    { key: "week", label: "This Week" },
-    { key: "month", label: "This Month" },
-    { key: "quarter", label: "This Quarter" },
-    { key: "year", label: "This Year" },
+    { key: "week", label: "Week" },
+    { key: "month", label: "Month" },
+    { key: "quarter", label: "Quarter" },
+    { key: "year", label: "Year" },
   ];
 
+  const handlePresetClick = (key: Preset) => {
+    const now = new Date();
+    setAnchor(now);
+    onChange(getRangeForAnchor(key, now));
+  };
+
+  const handleNav = (direction: -1 | 1) => {
+    const newAnchor = shiftAnchor(preset, anchor, direction);
+    setAnchor(newAnchor);
+    onChange(getRangeForAnchor(preset, newAnchor));
+  };
+
   return (
-    <div className="flex gap-1">
-      {presets.map(({ key, label }) => (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1">
         <Button
-          key={key}
-          variant={selected === key ? "default" : "outline"}
+          variant="ghost"
           size="sm"
-          onClick={() => onChange(getRange(key))}
+          onClick={() => handleNav(-1)}
+          className="h-7 w-7 p-0"
         >
-          {label}
+          <ChevronLeft className="h-4 w-4" />
         </Button>
-      ))}
+        <span className="text-sm text-muted-foreground min-w-[140px] text-center">
+          {formatPeriodLabel(preset, anchor)}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleNav(1)}
+          className="h-7 w-7 p-0"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex gap-1 rounded-lg bg-secondary p-1">
+        {presets.map(({ key, label }) => (
+          <Button
+            key={key}
+            variant={selected === key ? "default" : "ghost"}
+            size="sm"
+            onClick={() => handlePresetClick(key)}
+            className="h-7 px-3 text-xs"
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }

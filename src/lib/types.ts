@@ -130,3 +130,33 @@ export interface SyncResult {
   modified: number;
   removed: number;
 }
+
+export interface SpendingBreakdown {
+  months: string[];
+  categories: SpendingCategoryData[];
+  monthly_totals: number[];
+  grand_total: number;
+}
+
+export interface SpendingCategoryData {
+  name: string;
+  color: string;
+  amounts: number[];
+  total: number;
+}
+
+export interface FixedCostItem {
+  merchant: string;
+  category: string;
+  color: string;
+  amounts: (number | null)[];
+  avg_amount: number;
+  frequency: number;
+}
+
+export interface FixedCostsAnalysis {
+  months: string[];
+  items: FixedCostItem[];
+  monthly_totals: number[];
+  total_monthly_avg: number;
+}

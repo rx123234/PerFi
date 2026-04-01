@@ -53,8 +53,6 @@ export default function TellerSettings() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Settings</h2>
-
       <Card>
         <CardHeader>
           <CardTitle>Teller API Configuration</CardTitle>
@@ -64,7 +62,7 @@ export default function TellerSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isConfigured && (
-            <div className="flex items-center gap-2 p-3 rounded-md bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-success/10 text-success text-sm">
               <ShieldCheck className="h-4 w-4" />
               Teller configured (Environment: {configuredEnv})
             </div>
@@ -85,7 +83,7 @@ export default function TellerSettings() {
             <select
               value={environment}
               onChange={(e) => setEnvironment(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 w-full rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground"
             >
               <option value="sandbox">Sandbox (test data)</option>
               <option value="development">Development (real banks)</option>
@@ -124,13 +122,13 @@ export default function TellerSettings() {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-sm text-red-600">
+            <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
           )}
           {saved && (
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-success">
               <CheckCircle className="h-4 w-4" />
               Configuration saved successfully
             </div>

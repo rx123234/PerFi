@@ -1,0 +1,85 @@
+<h2>Navigation Layout</h2>
+<p class="subtitle">Maybe uses a narrow icon-only navbar + a separate collapsible sidebar for account details. How should PerFi's nav work?</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current PerFi Layout</div>
+    <div class="mockup-body" style="display:flex; min-height:300px; font-size:13px;">
+      <div style="width:180px; background:rgba(255,255,255,0.05); border-right:1px solid rgba(255,255,255,0.1); padding:12px; flex-shrink:0;">
+        <div style="font-weight:bold; font-size:16px; margin-bottom:4px;">PerFi</div>
+        <div style="font-size:11px; opacity:0.5; margin-bottom:16px;">Personal Finance</div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="background:rgba(255,255,255,0.15); padding:6px 10px; border-radius:6px; display:flex; align-items:center; gap:8px;">📊 Dashboard</div>
+          <div style="padding:6px 10px; opacity:0.6; display:flex; align-items:center; gap:8px;">💵 Cash Flow</div>
+          <div style="padding:6px 10px; opacity:0.6; display:flex; align-items:center; gap:8px;">🔀 Money Flow</div>
+          <div style="padding:6px 10px; opacity:0.6; display:flex; align-items:center; gap:8px;">↔️ Transactions</div>
+          <div style="padding:6px 10px; opacity:0.6; display:flex; align-items:center; gap:8px;">🏦 Accounts</div>
+          <div style="padding:6px 10px; opacity:0.6; display:flex; align-items:center; gap:8px;">🏷️ Categories</div>
+          <div style="padding:6px 10px; opacity:0.6; display:flex; align-items:center; gap:8px;">📤 Import</div>
+          <div style="padding:6px 10px; opacity:0.6; display:flex; align-items:center; gap:8px;">⚙️ Settings</div>
+        </div>
+      </div>
+      <div style="flex:1; padding:16px;">
+        <div class="placeholder" style="height:100%;">Main Content Area</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Maybe-Style Layout</div>
+    <div class="mockup-body" style="display:flex; min-height:300px; font-size:13px;">
+      <div style="width:60px; background:rgba(255,255,255,0.03); display:flex; flex-direction:column; align-items:center; padding:12px 0; flex-shrink:0; gap:2px;">
+        <div style="width:36px; height:36px; background:linear-gradient(135deg, #6366f1, #8b5cf6); border-radius:8px; margin-bottom:12px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold;">P</div>
+        <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(255,255,255,0.1); font-size:16px;" title="Home">📊</div>
+        <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; opacity:0.5; font-size:16px;" title="Transactions">💳</div>
+        <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; opacity:0.5; font-size:16px;" title="Cash Flow">💵</div>
+        <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; opacity:0.5; font-size:16px;" title="Spending">📈</div>
+        <div style="flex:1;"></div>
+        <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; opacity:0.5; font-size:16px;" title="Settings">⚙️</div>
+      </div>
+      <div style="width:200px; background:rgba(255,255,255,0.03); border-left:1px solid rgba(255,255,255,0.06); border-right:1px solid rgba(255,255,255,0.06); padding:12px; flex-shrink:0;">
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; opacity:0.4; margin-bottom:8px;">Accounts</div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="padding:6px 8px; border-radius:6px; background:rgba(255,255,255,0.05); display:flex; justify-content:space-between;">
+            <span>Checking</span><span style="opacity:0.6;">$4,230</span>
+          </div>
+          <div style="padding:6px 8px; border-radius:6px; display:flex; justify-content:space-between;">
+            <span>Savings</span><span style="opacity:0.6;">$12,500</span>
+          </div>
+          <div style="padding:6px 8px; border-radius:6px; display:flex; justify-content:space-between;">
+            <span>Credit Card</span><span style="opacity:0.6;">-$1,840</span>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1; padding:16px;">
+        <div class="placeholder" style="height:100%;">Main Content Area (wider)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:1.5rem;">
+  <div class="option" data-choice="maybe-full" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Full Maybe Layout</h3>
+      <p>Icon-only nav rail (60-84px) + collapsible account sidebar + main content. Three-panel on desktop.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Hybrid: Slim Nav + No Sidebar</h3>
+      <p>Icon-only nav rail like Maybe, but no separate account sidebar. Accounts are a full page instead. Simpler two-panel layout, more content space.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="maybe-collapsible" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Maybe Layout with Collapsible Labels</h3>
+      <p>Nav rail that can expand to show labels on hover/toggle (like VS Code sidebar). Account sidebar is collapsible. Best of both worlds.</p>
+    </div>
+  </div>
+</div>

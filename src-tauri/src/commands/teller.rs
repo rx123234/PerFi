@@ -80,14 +80,14 @@ fn map_teller_category(category: &Option<String>) -> Option<String> {
         "groceries" => Some("cat-groceries".to_string()),
         "fuel" => Some("cat-gas".to_string()),
         "shopping" | "clothing" | "electronics" => Some("cat-shopping".to_string()),
-        "software" | "phone" | "service" => Some("cat-subscriptions".to_string()),
-        "utilities" => Some("cat-utilities".to_string()),
+        "software" => Some("cat-subscriptions".to_string()),
+        "phone" | "utilities" => Some("cat-utilities".to_string()),
         "home" | "accommodation" => Some("cat-housing".to_string()),
         "transport" | "travel" => Some("cat-transportation".to_string()),
         "entertainment" | "sport" => Some("cat-entertainment".to_string()),
         "health" | "insurance" => Some("cat-health".to_string()),
         "income" => Some("cat-income".to_string()),
-        "investment" | "loan" | "tax" => Some("cat-transfer".to_string()),
+        "investment" | "loan" | "tax" | "service" => Some("cat-transfer".to_string()),
         _ => None,
     }
 }
@@ -134,6 +134,9 @@ mod tests {
         assert_eq!(map_teller_category(&Some("fuel".to_string())), Some("cat-gas".to_string()));
         assert_eq!(map_teller_category(&Some("transport".to_string())), Some("cat-transportation".to_string()));
         assert_eq!(map_teller_category(&Some("income".to_string())), Some("cat-income".to_string()));
+        assert_eq!(map_teller_category(&Some("phone".to_string())), Some("cat-utilities".to_string()));
+        assert_eq!(map_teller_category(&Some("service".to_string())), Some("cat-transfer".to_string()));
+        assert_eq!(map_teller_category(&Some("software".to_string())), Some("cat-subscriptions".to_string()));
     }
 
     #[test]
@@ -285,18 +288,21 @@ pub async fn teller_connect_success(
             conn.execute(
                 "INSERT OR IGNORE INTO accounts
                  (id, name, institution, account_type, teller_account_id, teller_enrollment_id, teller_access_token, source)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'keychain', 'teller')",
-                rusqlite::params![id, ta.name, ta.institution.name, acc_type, ta.id, enrollment_id],
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'teller')",
+                rusqlite::params![id, ta.name, ta.institution.name, acc_type, ta.id, enrollment_id, access_token],
             )?;
-            if conn.changes() > 0 {
-                created.push((
-                    id,
-                    ta.name.clone(),
-                    ta.institution.name.clone(),
-                    acc_type.to_string(),
-                    ta.id.clone(),
-                ));
-            }
+            // Always update the token in case it changed (re-link)
+            conn.execute(
+                "UPDATE accounts SET teller_access_token = ?1 WHERE teller_account_id = ?2",
+                rusqlite::params![access_token, ta.id],
+            )?;
+            created.push((
+                id,
+                ta.name.clone(),
+                ta.institution.name.clone(),
+                acc_type.to_string(),
+                ta.id.clone(),
+            ));
         }
         Ok(())
     })();
@@ -311,19 +317,6 @@ pub async fn teller_connect_success(
         }
     }
     drop(conn);
-
-    // Store access token in keychain keyed by enrollment_id.
-    // If this fails, clean up the DB rows so the user can re-enroll.
-    let keychain_key = format!("teller-access-token-{}", enrollment_id);
-    if let Err(e) = crate::db::store_secret(&keychain_key, &access_token) {
-        // Best-effort cleanup: delete the accounts we just inserted so re-enrollment works
-        let conn = state.0.lock().map_err(|e| e.to_string())?;
-        let _ = conn.execute(
-            "DELETE FROM accounts WHERE teller_enrollment_id = ?1 AND source = 'teller'",
-            rusqlite::params![enrollment_id],
-        );
-        return Err(format!("Failed to store access token securely: {}. Please try linking again.", e));
-    }
 
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let accounts = created
@@ -349,23 +342,20 @@ pub async fn sync_transactions(
     state: State<'_, DbState>,
     account_id: String,
 ) -> Result<SyncResult, String> {
-    let (config, teller_account_id, enrollment_id, last_tx_id) = {
+    let (config, teller_account_id, access_token, last_tx_id) = {
         let conn = state.0.lock().map_err(|e| e.to_string())?;
         let config = get_config(&conn)?;
-        let row: (String, String, Option<String>) = conn
+        let row: (String, Option<String>, Option<String>) = conn
             .query_row(
-                "SELECT teller_account_id, teller_enrollment_id, teller_last_tx_id
+                "SELECT teller_account_id, teller_access_token, teller_last_tx_id
                  FROM accounts WHERE id = ?1",
                 [&account_id],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
             .map_err(|e| format!("Account not found: {}", e))?;
-        (config, row.0, row.1, row.2)
+        let token = row.1.ok_or_else(|| "Access token not found. Please re-link the account.".to_string())?;
+        (config, row.0, token, row.2)
     };
-
-    let keychain_key = format!("teller-access-token-{}", enrollment_id);
-    let access_token = crate::db::get_secret(&keychain_key)?
-        .ok_or_else(|| "Access token not found. Please re-link the account.".to_string())?;
 
     let client = build_teller_client(&config.cert_path, &config.key_path)?;
 
@@ -402,6 +392,7 @@ pub async fn sync_transactions(
     let mut added = 0usize;
 
     let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let cat_rules = crate::categorize::rules::load_rules(&conn);
     conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
 
     let db_result = (|| -> Result<(), String> {
@@ -415,8 +406,11 @@ pub async fn sync_transactions(
                 return Err(format!("Invalid transaction amount: '{}'", tx.amount));
             }
             let amount_cents = (amount * 100.0).round() as i64;
-            let category_id = map_teller_category(&tx.details.category);
             let merchant = tx.details.counterparty.as_ref().and_then(|c| c.name.clone());
+            // Try category_rules first (more specific), then fall back to Teller's category
+            let category_id = crate::categorize::rules::categorize_with_rules(
+                &cat_rules, &tx.description, &merchant,
+            ).or_else(|| map_teller_category(&tx.details.category));
             let pending = tx.status == "pending";
             let id = Uuid::new_v4().to_string();
 

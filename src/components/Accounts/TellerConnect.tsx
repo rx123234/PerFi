@@ -8,7 +8,7 @@ declare global {
   interface Window {
     TellerConnect: {
       setup: (config: {
-        appId: string;
+        applicationId: string;
         environment: string;
         onSuccess: (enrollment: TellerEnrollment) => void;
         onExit: () => void;
@@ -56,21 +56,24 @@ export default function TellerConnectButton({ onSuccess }: Props) {
       await loadTellerScript();
 
       const tellerConnect = window.TellerConnect.setup({
-        appId: config.app_id,
+        applicationId: config.app_id,
         environment: config.environment,
         onSuccess: async (enrollment: TellerEnrollment) => {
+          console.log("[teller] onSuccess fired:", JSON.stringify(enrollment));
           try {
             const accounts = await api.tellerConnectSuccess(
               enrollment.accessToken,
               enrollment.enrollment.id
             );
+            console.log("[teller] backend returned accounts:", accounts.length);
             alert(`Linked ${accounts.length} account(s) successfully!`);
             onSuccess();
           } catch (err) {
+            console.error("[teller] tellerConnectSuccess error:", err);
             alert(`Failed to link account: ${err}`);
           }
         },
-        onExit: () => setLoading(false),
+        onExit: () => { console.log("[teller] onExit fired"); setLoading(false); },
       });
 
       tellerConnect.open();

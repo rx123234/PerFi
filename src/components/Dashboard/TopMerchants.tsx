@@ -36,12 +36,32 @@ export default function TopMerchants({ data }: Props) {
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
-              <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 12 }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+              <XAxis
+                type="number"
+                tickFormatter={(v) => `$${v}`}
+                tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                width={80}
+                axisLine={false}
+                tickLine={false}
+              />
               <Tooltip
                 formatter={(value) => formatCurrency(Number(value))}
+                contentStyle={{
+                  backgroundColor: "var(--popover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  color: "var(--popover-foreground)",
+                  fontSize: "13px",
+                }}
               />
-              <Bar dataKey="amount" fill="#6366f1" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="amount" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

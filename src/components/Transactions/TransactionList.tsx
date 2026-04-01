@@ -25,7 +25,6 @@ export default function TransactionList() {
   const [syncing, setSyncing] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Debounce search input
   useEffect(() => {
     debounceTimer.current = setTimeout(() => {
       setDebouncedSearch(search);
@@ -89,12 +88,13 @@ export default function TransactionList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Transactions</h2>
-        <Button onClick={handleSync} disabled={syncing} size="sm">
+        <Button onClick={handleSync} disabled={syncing} size="sm" variant="outline">
           <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
           {syncing ? "Syncing..." : "Sync"}
         </Button>
       </div>
 
+      {/* Filters */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -108,7 +108,7 @@ export default function TransactionList() {
         <select
           value={accountFilter}
           onChange={(e) => { setAccountFilter(e.target.value); setPage(0); }}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          className="h-9 rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground"
         >
           <option value="">All Accounts</option>
           {accounts.map((a) => (
@@ -120,7 +120,7 @@ export default function TransactionList() {
         <select
           value={categoryFilter}
           onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          className="h-9 rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground"
         >
           <option value="">All Categories</option>
           {categories.map((c) => (
@@ -129,26 +129,27 @@ export default function TransactionList() {
         </select>
       </div>
 
+      {/* Transaction Table */}
       <Card>
         <CardContent className="p-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
-                <th className="text-left p-3 text-sm font-medium text-muted-foreground">Description</th>
-                <th className="text-left p-3 text-sm font-medium text-muted-foreground">Category</th>
-                <th className="text-right p-3 text-sm font-medium text-muted-foreground">Amount</th>
-                <th className="text-left p-3 text-sm font-medium text-muted-foreground">Source</th>
+              <tr className="border-b border-border">
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                <th className="text-right p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Source</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((tx) => (
-                <tr key={tx.id} className="border-b hover:bg-muted/50">
-                  <td className="p-3 text-sm">{formatDate(tx.date)}</td>
+                <tr key={tx.id} className="border-b border-border hover:bg-surface-hover transition-colors">
+                  <td className="p-3 text-sm text-muted-foreground">{formatDate(tx.date)}</td>
                   <td className="p-3 text-sm">
-                    <div>{tx.merchant || tx.description}</div>
+                    <div className="font-medium">{tx.merchant || tx.description}</div>
                     {tx.merchant && tx.description !== tx.merchant && (
-                      <div className="text-xs text-muted-foreground">{tx.description}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{tx.description}</div>
                     )}
                     {tx.pending && <Badge variant="outline" className="ml-2 text-xs">Pending</Badge>}
                   </td>
@@ -159,7 +160,7 @@ export default function TransactionList() {
                         onChange={(e) => handleCategoryChange(tx.id, e.target.value)}
                         onBlur={() => setEditingTxId(null)}
                         autoFocus
-                        className="h-7 rounded border border-input bg-background px-2 text-xs"
+                        className="h-7 rounded-lg border border-border bg-secondary/50 px-2 text-xs text-foreground"
                       >
                         <option value="">Uncategorized</option>
                         {categories.map((c) => (
@@ -179,7 +180,7 @@ export default function TransactionList() {
                       </button>
                     )}
                   </td>
-                  <td className={`p-3 text-sm text-right font-medium ${tx.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  <td className={`p-3 text-sm text-right font-medium ${tx.amount >= 0 ? "text-success" : "text-destructive"}`}>
                     {formatCurrency(tx.amount)}
                   </td>
                   <td className="p-3 text-sm">
@@ -199,6 +200,7 @@ export default function TransactionList() {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
@@ -213,8 +215,8 @@ export default function TransactionList() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm">
-              Page {page + 1} of {totalPages}
+            <span className="text-sm text-muted-foreground">
+              {page + 1} / {totalPages}
             </span>
             <Button
               variant="outline"

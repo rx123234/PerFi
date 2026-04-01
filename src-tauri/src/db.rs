@@ -128,6 +128,18 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         eprintln!("Applied migration 002_teller.sql");
     }
 
+    if !applied.contains(&3) {
+        let migration = include_str!("../migrations/003_fix_categories.sql");
+        conn.execute_batch(migration)
+            .map_err(|e| format!("Failed to run migration 003: {}", e))?;
+        conn.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?1)",
+            [3],
+        )
+        .map_err(|e| format!("Failed to record migration: {}", e))?;
+        eprintln!("Applied migration 003_fix_categories.sql");
+    }
+
     Ok(())
 }
 

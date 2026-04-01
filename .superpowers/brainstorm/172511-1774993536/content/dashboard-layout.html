@@ -1,0 +1,46 @@
+<h2>Dashboard: What should be the hero section?</h2>
+<p class="subtitle">Maybe leads with Net Worth. PerFi currently shows spending pie chart + top merchants. What should PerFi's dashboard prioritize?</p>
+
+<div class="options">
+  <div class="option" data-choice="net-worth" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Net Worth First (like Maybe)</h3>
+      <p>Big time-series chart showing net worth over time at the top, with account balances and spending breakdown below. Requires calculating net worth from account balances.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="cashflow" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Cash Flow First</h3>
+      <p>Lead with income vs spending summary cards (like your current CashFlowPage), then spending breakdown and trends. More actionable for day-to-day budgeting.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="combined" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Combined Overview</h3>
+      <p>Net worth chart at top (smaller), then a row of cash flow summary cards (Income / Spending / Net), then spending by category + top merchants grid below. Everything at a glance.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 1.5rem;">
+  <p class="label">Current PerFi pages that could merge into this:</p>
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:8px;">
+    <div style="padding:12px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+      <strong style="font-size:13px;">Dashboard</strong>
+      <p style="font-size:12px; opacity:0.6; margin-top:4px;">Spending pie chart, top merchants</p>
+    </div>
+    <div style="padding:12px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+      <strong style="font-size:13px;">Cash Flow</strong>
+      <p style="font-size:12px; opacity:0.6; margin-top:4px;">Income/spending/net cards, trend chart</p>
+    </div>
+    <div style="padding:12px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+      <strong style="font-size:13px;">Money Flow</strong>
+      <p style="font-size:12px; opacity:0.6; margin-top:4px;">Sankey diagram</p>
+    </div>
+  </div>
+</div>

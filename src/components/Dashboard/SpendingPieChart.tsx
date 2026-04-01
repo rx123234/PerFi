@@ -7,6 +7,11 @@ interface Props {
   data: CategorySpending[];
 }
 
+const CHART_COLORS = [
+  "var(--chart-1)", "var(--chart-2)", "var(--chart-3)",
+  "var(--chart-4)", "var(--chart-5)", "var(--chart-6)",
+];
+
 export default function SpendingPieChart({ data }: Props) {
   if (data.length === 0) {
     return (
@@ -39,31 +44,38 @@ export default function SpendingPieChart({ data }: Props) {
                   cy="50%"
                   innerRadius={40}
                   outerRadius={80}
-                  strokeWidth={2}
+                  strokeWidth={0}
                 >
                   {data.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
+                    <Cell key={index} fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
                   formatter={(value) => formatCurrency(Number(value))}
+                  contentStyle={{
+                    backgroundColor: "var(--popover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    color: "var(--popover-foreground)",
+                    fontSize: "13px",
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex-1 space-y-1 overflow-auto max-h-48">
+          <div className="flex-1 space-y-1.5 overflow-auto max-h-48">
             {data.map((cat) => (
               <div key={cat.category_id} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-3 h-3 rounded-full"
+                    className="w-2.5 h-2.5 rounded-full"
                     style={{ backgroundColor: cat.color }}
                   />
-                  <span>{cat.category_name}</span>
+                  <span className="text-secondary-foreground">{cat.category_name}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span className="font-medium">{formatCurrency(cat.amount)}</span>
-                  <span className="text-muted-foreground w-12 text-right">
+                  <span className="text-muted-foreground text-xs w-12 text-right">
                     {cat.percentage.toFixed(1)}%
                   </span>
                 </div>

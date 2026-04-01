@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import * as api from "@/lib/api";
-import type { Account } from "@/lib/types";
+import type { Account, AccountBalance } from "@/lib/types";
 import { Plus, Trash2, CreditCard, Landmark, RefreshCw, Link } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 import TellerConnectButton from "./TellerConnect";
 
 export default function AccountList() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [balances, setBalances] = useState<Map<string, AccountBalance>>(new Map());
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [institution, setInstitution] = useState("");
@@ -18,8 +20,14 @@ export default function AccountList() {
 
   const loadAccounts = useCallback(async () => {
     try {
-      const accs = await api.getAccounts();
+      const [accs, bals] = await Promise.all([
+        api.getAccounts(),
+        api.getAccountBalances(),
+      ]);
       setAccounts(accs);
+      const balMap = new Map<string, AccountBalance>();
+      for (const b of bals) balMap.set(b.account_id, b);
+      setBalances(balMap);
     } catch (err) {
       console.error("Failed to load accounts:", err);
     }
@@ -75,19 +83,19 @@ export default function AccountList() {
           <CardContent className="p-4">
             <div className="flex gap-2 items-end">
               <div className="flex-1">
-                <label className="text-sm font-medium">Name</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Name</label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Chase Checking" />
               </div>
               <div className="w-40">
-                <label className="text-sm font-medium">Institution</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Institution</label>
                 <Input value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="e.g., Chase" />
               </div>
               <div className="w-36">
-                <label className="text-sm font-medium">Type</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Type</label>
                 <select
                   value={accountType}
                   onChange={(e) => setAccountType(e.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-9 w-full rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground"
                 >
                   <option value="checking">Checking</option>
                   <option value="savings">Savings</option>
@@ -100,25 +108,40 @@ export default function AccountList() {
         </Card>
       )}
 
-      <div className="space-y-2">
+      {/* Account Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {accounts.map((acc) => (
-          <Card key={acc.id}>
+          <Card key={acc.id} className="hover:border-foreground/20 transition-colors">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {acc.account_type === "credit_card" ? (
-                    <CreditCard className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <Landmark className="h-5 w-5 text-muted-foreground" />
-                  )}
+                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                    {acc.account_type === "credit_card" ? (
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <Landmark className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
                   <div>
-                    <p className="font-medium">{acc.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-medium text-sm">{acc.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {acc.institution ?? acc.account_type}
-                      {acc.mask ? ` ****${acc.mask}` : ""}
+                      {acc.mask ? ` ····${acc.mask}` : ""}
                     </p>
                   </div>
-                  <Badge variant={acc.source === "teller" ? "default" : "secondary"}>
+                </div>
+                <div className="flex items-center gap-3">
+                  {balances.has(acc.id) && (() => {
+                    const bal = balances.get(acc.id)!;
+                    return (
+                      <div className="text-right">
+                        <p className={`text-lg font-bold ${bal.balance >= 0 ? "text-success" : "text-destructive"}`}>
+                          {formatCurrency(Math.abs(bal.balance))}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                  <Badge variant={acc.source === "teller" ? "default" : "secondary"} className="text-xs">
                     {acc.source === "teller" ? (
                       <><Link className="h-3 w-3 mr-1" /> Teller</>
                     ) : (
@@ -126,35 +149,38 @@ export default function AccountList() {
                     )}
                   </Badge>
                 </div>
-                <div className="flex gap-2">
-                  {acc.source === "teller" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSync(acc.id)}
-                      disabled={syncing === acc.id}
-                    >
-                      <RefreshCw className={`h-4 w-4 ${syncing === acc.id ? "animate-spin" : ""}`} />
-                      Sync
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(acc.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
+              </div>
+              <div className="flex gap-2 mt-3 pt-3 border-t border-border">
+                {acc.source === "teller" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSync(acc.id)}
+                    disabled={syncing === acc.id}
+                    className="text-xs"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${syncing === acc.id ? "animate-spin" : ""}`} />
+                    Sync
                   </Button>
-                </div>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(acc.id)} className="text-xs text-destructive hover:text-destructive ml-auto">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </Button>
               </div>
             </CardContent>
           </Card>
         ))}
-
-        {accounts.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              No accounts yet. Link a bank via Teller or add a manual account.
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {accounts.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Landmark className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">No accounts yet. Link a bank via Teller or add a manual account.</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

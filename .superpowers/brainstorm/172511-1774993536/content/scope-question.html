@@ -1,0 +1,56 @@
+<h2>What aspects of Maybe's UI/UX do you want to adopt?</h2>
+<p class="subtitle">Let's figure out the scope. Select all that appeal to you.</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="design-system" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Design System & Colors</h3>
+      <p>Maybe's color palette (dark near-black backgrounds, semantic color scales with alpha variants), Geist font family, refined spacing/shadows/borders. Essentially adopting their visual "feel".</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="layout" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Layout & Navigation</h3>
+      <p>Maybe's icon-only left nav bar (84px) + collapsible sidebar for account details, instead of PerFi's current wider text sidebar (w-56). Mobile bottom tab bar.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="dashboard" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Dashboard Design</h3>
+      <p>Maybe's dashboard layout: Net Worth chart prominently at top, collapsible Balance Sheet with account groups, Cashflow Sankey. Overall page structure and card layouts.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="components" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Component Library</h3>
+      <p>Richer UI components: menus with dropdowns, tabs, dialogs/modals, tooltips, toggles, disclosure panels, filled icon containers. Currently PerFi only has card, button, badge, input.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="transactions" onclick="toggleSelect(this)">
+    <div class="letter">E</div>
+    <div class="content">
+      <h3>Transaction List UX</h3>
+      <p>Maybe's transaction page: bulk selection, advanced filtering, inline category/tag editing, mobile card view vs desktop grid. You mentioned you prefer PerFi's transaction <em>logic</em> — this is just the presentation layer.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="dark-mode" onclick="toggleSelect(this)">
+    <div class="letter">F</div>
+    <div class="content">
+      <h3>Dark Mode (Default)</h3>
+      <p>Maybe defaults to a dark theme with a sophisticated dark color palette. PerFi currently has light + dark tokens but defaults to light.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem; padding: 1rem; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+  <p style="font-size: 0.9rem; opacity: 0.7;"><strong>Note:</strong> PerFi is React/Tauri, Maybe is Rails — we'll translate the <em>design language</em>, not copy code. Your existing transaction logic, Teller integration, and Rust backend stay unchanged.</p>
+</div>

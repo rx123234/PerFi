@@ -1,0 +1,77 @@
+<h2>Page Consolidation</h2>
+<p class="subtitle">With the combined dashboard and icon-only nav, how should we organize the pages?</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current: 8 Pages</div>
+    <div class="mockup-body" style="padding:16px;">
+      <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">📊 Dashboard</div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">💵 Cash Flow</div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">🔀 Money Flow</div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">↔️ Transactions</div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">🏦 Accounts</div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">🏷️ Categories</div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">📤 Import</div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.08);">⚙️ Settings</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Proposed: 5 Nav Items</div>
+    <div class="mockup-body" style="padding:16px;">
+      <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(100,200,255,0.15); border:1px solid rgba(100,200,255,0.3);">
+          📊 <strong>Home</strong>
+          <span style="font-size:11px; opacity:0.5; display:block; margin-top:2px;">Combined dashboard: net worth + cash flow + spending + merchants</span>
+        </div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(100,200,255,0.15); border:1px solid rgba(100,200,255,0.3);">
+          💳 <strong>Transactions</strong>
+          <span style="font-size:11px; opacity:0.5; display:block; margin-top:2px;">Full transaction list with filters, search, bulk actions</span>
+        </div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(100,200,255,0.15); border:1px solid rgba(100,200,255,0.3);">
+          🔀 <strong>Money Flow</strong>
+          <span style="font-size:11px; opacity:0.5; display:block; margin-top:2px;">Sankey diagram — unique enough to keep as its own view</span>
+        </div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(100,200,255,0.15); border:1px solid rgba(100,200,255,0.3);">
+          🏦 <strong>Accounts</strong>
+          <span style="font-size:11px; opacity:0.5; display:block; margin-top:2px;">Account list, balances, Teller sync, connection management</span>
+        </div>
+        <div style="padding:8px 12px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); margin-top:8px;">
+          ⚙️ <strong>Settings</strong>
+          <span style="font-size:11px; opacity:0.5; display:block; margin-top:2px;">Teller config + Categories + Import (consolidated)</span>
+        </div>
+      </div>
+      <div style="margin-top:12px; padding:8px; border-radius:6px; background:rgba(255,200,50,0.1); border:1px solid rgba(255,200,50,0.2); font-size:11px; opacity:0.8;">
+        Dashboard absorbs Cash Flow page. Settings absorbs Categories + Import.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:1.5rem;">
+  <div class="option" data-choice="consolidate-5" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Consolidate to 5 (as shown)</h3>
+      <p>Home, Transactions, Money Flow, Accounts, Settings. Clean icon rail. Categories and Import become tabs/sections within Settings.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="consolidate-4" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Consolidate to 4 (merge Money Flow into Home)</h3>
+      <p>Home (with sankey as a section/tab), Transactions, Accounts, Settings. Ultra-minimal nav.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="keep-more" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Keep 6+ (less consolidation)</h3>
+      <p>Keep Categories and/or Import as separate nav items. More icons but easier to find things directly.</p>
+    </div>
+  </div>
+</div>

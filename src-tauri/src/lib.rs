@@ -47,6 +47,8 @@ pub fn run() {
             commands::dashboard::get_sankey_data,
             commands::dashboard::get_top_merchants,
             commands::dashboard::get_account_balances,
+            commands::dashboard::get_spending_breakdown,
+            commands::dashboard::get_fixed_costs,
             // Teller
             commands::teller::save_teller_config,
             commands::teller::get_teller_config,

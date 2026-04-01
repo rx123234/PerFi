@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(pnpm tauri:*)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\github\\\\PerFi && pnpm tauri build\" 2>&1)",
+      "Bash(cmd.exe /c \"pnpm --version\" 2>&1)",
+      "Bash(cmd.exe /c \"where pnpm\")",
+      "Bash(cmd.exe /c \"where node\")",
+      "Bash(powershell.exe -Command \"Get-Command pnpm -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path 'C:\\\\Users\\\\patri\\\\AppData\\\\Roaming\\\\npm', 'C:\\\\Users\\\\patri\\\\AppData\\\\Local\\\\pnpm', 'C:\\\\Program Files\\\\nodejs' -Filter 'pnpm*' -ErrorAction SilentlyContinue | Select-Object FullName\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path 'C:\\\\Users\\\\patri\\\\AppData\\\\Roaming\\\\npm' -Filter 'pnpm*' -ErrorAction SilentlyContinue | Select-Object Name\")",
+      "Bash(powershell.exe -Command \"Test-Path 'D:\\\\github\\\\PerFi\\\\node_modules'; Get-ChildItem 'D:\\\\github\\\\PerFi' -Force | Select-Object Name\")",
+      "Bash(powershell.exe -Command \"cd D:\\\\github\\\\PerFi; npm install -g pnpm@10.29.3 2>&1\")",
+      "Bash(powershell.exe -Command \"cd D:\\\\github\\\\PerFi; pnpm install 2>&1\")",
+      "Bash(powershell.exe -Command \"cd D:\\\\github\\\\PerFi; pnpm tauri build 2>&1\")",
+      "Bash(powershell.exe -Command \"Get-Command cargo -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; Get-Command rustup -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")"
+    ]
+  }
+}

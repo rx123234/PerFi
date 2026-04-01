@@ -7,10 +7,12 @@ import type {
   CategoryRule,
   CategorySpending,
   CsvFormat,
+  FixedCostsAnalysis,
   ImportResult,
   MerchantSpending,
   TellerConfigMeta,
   SankeyData,
+  SpendingBreakdown,
   SyncResult,
   Transaction,
   TransactionFilter,
@@ -97,3 +99,11 @@ export const previewCsv = (filePath: string, formatName: string, accountId: stri
 export const importCsv = (filePath: string, accountId: string, formatName: string) =>
   invoke<ImportResult>("import_csv", { filePath, accountId, formatName });
 export const recategorizeTransactions = () => invoke<number>("recategorize_transactions");
+
+// Spending Breakdown
+export const getSpendingBreakdown = (trailingMonths: number) =>
+  invoke<SpendingBreakdown>("get_spending_breakdown", { trailingMonths });
+
+// Fixed Costs
+export const getFixedCosts = (trailingMonths: number, minMonths?: number) =>
+  invoke<FixedCostsAnalysis>("get_fixed_costs", { trailingMonths, minMonths: minMonths ?? null });

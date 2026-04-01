@@ -9,9 +9,9 @@ interface Props {
 }
 
 const COLORS = [
-  "#4CAF50", "#2196F3", "#FF9800", "#9C27B0", "#F44336",
-  "#00BCD4", "#795548", "#E91E63", "#607D8B", "#8BC34A",
-  "#CDDC39", "#FF5722", "#3F51B5", "#009688",
+  "#6366F1", "#22C55E", "#F59E0B", "#EC4899", "#06B6D4",
+  "#8B5CF6", "#F97316", "#14B8A6", "#EF4444", "#84CC16",
+  "#A855F7", "#0EA5E9", "#F43F5E", "#10B981",
 ];
 
 export default function SankeyFlow({ data }: Props) {
@@ -36,13 +36,12 @@ export default function SankeyFlow({ data }: Props) {
       links: data.links.map((d) => ({ ...d })),
     });
 
-    // Clear
     while (svg.firstChild) svg.removeChild(svg.firstChild);
 
     // Links
     const linkGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     linkGroup.setAttribute("fill", "none");
-    linkGroup.setAttribute("stroke-opacity", "0.3");
+    linkGroup.setAttribute("stroke-opacity", "0.25");
     svg.appendChild(linkGroup);
 
     const pathGen = sankeyLinkHorizontal();
@@ -65,6 +64,7 @@ export default function SankeyFlow({ data }: Props) {
       rect.setAttribute("y", String(node.y0));
       rect.setAttribute("width", String((node.x1 ?? 0) - (node.x0 ?? 0)));
       rect.setAttribute("height", String(Math.max(1, (node.y1 ?? 0) - (node.y0 ?? 0))));
+      rect.setAttribute("rx", "3");
       const idx = node.index ?? 0;
       rect.setAttribute("fill", COLORS[idx % COLORS.length]);
       nodeGroup.appendChild(rect);
@@ -76,7 +76,8 @@ export default function SankeyFlow({ data }: Props) {
       text.setAttribute("dy", "0.35em");
       text.setAttribute("text-anchor", isLeft ? "start" : "end");
       text.setAttribute("font-size", "11");
-      text.setAttribute("fill", "currentColor");
+      text.setAttribute("font-family", "Geist, system-ui, sans-serif");
+      text.setAttribute("fill", "var(--muted-foreground)");
       text.textContent = `${node.name} (${formatCurrency(node.value ?? 0)})`;
       nodeGroup.appendChild(text);
     }
