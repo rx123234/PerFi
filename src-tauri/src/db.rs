@@ -140,6 +140,30 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         eprintln!("Applied migration 003_fix_categories.sql");
     }
 
+    if !applied.contains(&4) {
+        let migration = include_str!("../migrations/004_wealth_planning.sql");
+        conn.execute_batch(migration)
+            .map_err(|e| format!("Failed to run migration 004: {}", e))?;
+        conn.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?1)",
+            [4],
+        )
+        .map_err(|e| format!("Failed to record migration: {}", e))?;
+        eprintln!("Applied migration 004_wealth_planning.sql");
+    }
+
+    if !applied.contains(&5) {
+        let migration = include_str!("../migrations/005_account_balances.sql");
+        conn.execute_batch(migration)
+            .map_err(|e| format!("Failed to run migration 005: {}", e))?;
+        conn.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?1)",
+            [5],
+        )
+        .map_err(|e| format!("Failed to record migration: {}", e))?;
+        eprintln!("Applied migration 005_account_balances.sql");
+    }
+
     Ok(())
 }
 

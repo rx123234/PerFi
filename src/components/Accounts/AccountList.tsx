@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import * as api from "@/lib/api";
 import type { Account, AccountBalance } from "@/lib/types";
-import { Plus, Trash2, CreditCard, Landmark, RefreshCw, Link } from "lucide-react";
+import { Plus, Trash2, CreditCard, Landmark, RefreshCw, Link, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import TellerConnectButton from "./TellerConnect";
 
@@ -17,6 +17,7 @@ export default function AccountList() {
   const [institution, setInstitution] = useState("");
   const [accountType, setAccountType] = useState("checking");
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [syncingBalances, setSyncingBalances] = useState(false);
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -70,6 +71,26 @@ export default function AccountList() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Accounts</h2>
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={syncingBalances}
+            onClick={async () => {
+              setSyncingBalances(true);
+              try {
+                const count = await api.syncBalancesOnly();
+                alert(`Updated balances for ${count} accounts`);
+                loadAccounts();
+              } catch (err) {
+                alert(`Balance sync failed: ${err}`);
+              } finally {
+                setSyncingBalances(false);
+              }
+            }}
+          >
+            <DollarSign className={`h-4 w-4 ${syncingBalances ? "animate-spin" : ""}`} />
+            {syncingBalances ? "Syncing..." : "Sync Balances"}
+          </Button>
           <TellerConnectButton onSuccess={loadAccounts} />
           <Button onClick={() => setShowAdd(!showAdd)} size="sm" variant="outline">
             <Plus className="h-4 w-4" />

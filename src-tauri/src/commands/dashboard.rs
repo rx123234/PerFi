@@ -12,9 +12,9 @@ fn income_pred() -> &'static str {
 }
 
 /// Returns the account-type-aware spending predicate (CC charges + checking debits).
-/// Teller convention: negative = debit (money out), so CC charges are negative.
+/// Teller convention: CC charges are positive (amount owed), checking debits are negative.
 fn spending_pred() -> &'static str {
-    "(a.account_type = 'credit_card' AND t.amount_cents < 0) OR (a.account_type IN ('checking', 'savings') AND t.amount_cents < 0)"
+    "(a.account_type = 'credit_card' AND t.amount_cents > 0) OR (a.account_type IN ('checking', 'savings') AND t.amount_cents < 0)"
 }
 
 /// SQL expression that normalizes spending amounts to positive values.
@@ -345,7 +345,8 @@ pub fn get_account_balances(state: State<'_, DbState>) -> Result<Vec<AccountBala
     let mut stmt = conn
         .prepare(
             "SELECT a.id, a.name, a.account_type, a.institution, a.mask,
-                    COALESCE(CAST(SUM(t.amount_cents) AS REAL) / 100.0, 0) as balance
+                    COALESCE(CAST(SUM(t.amount_cents) AS REAL) / 100.0, 0) as tx_balance,
+                    a.balance_cents
              FROM accounts a
              LEFT JOIN transactions t ON a.id = t.account_id AND t.pending = 0
              GROUP BY a.id
@@ -355,13 +356,18 @@ pub fn get_account_balances(state: State<'_, DbState>) -> Result<Vec<AccountBala
 
     let mapped = stmt
         .query_map([], |row| {
+            let tx_balance: f64 = row.get(5)?;
+            let api_balance_cents: Option<i64> = row.get(6)?;
+            let balance = api_balance_cents
+                .map(|c| c as f64 / 100.0)
+                .unwrap_or(tx_balance);
             Ok(AccountBalance {
                 account_id: row.get(0)?,
                 account_name: row.get(1)?,
                 account_type: row.get(2)?,
                 institution: row.get(3)?,
                 mask: row.get(4)?,
-                balance: row.get(5)?,
+                balance,
             })
         })
         .map_err(|e| e.to_string())?;

@@ -1,6 +1,13 @@
 pub mod accounts;
+pub mod budgets;
 pub mod categories;
 pub mod dashboard;
+pub mod forecasting;
+pub mod goals;
 pub mod import;
+pub mod insights;
+pub mod investment_import;
+pub mod net_worth;
+pub mod retirement;
 pub mod teller;
 pub mod transactions;

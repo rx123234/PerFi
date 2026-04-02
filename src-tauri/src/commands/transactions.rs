@@ -23,8 +23,12 @@ pub fn get_transactions(
         params.push(Box::new(account_id.clone()));
     }
     if let Some(ref category_id) = filter.category_id {
-        sql.push_str(" AND t.category_id = ?");
-        params.push(Box::new(category_id.clone()));
+        if category_id == "cat-uncategorized" {
+            sql.push_str(" AND (t.category_id IS NULL OR t.category_id = 'cat-uncategorized')");
+        } else {
+            sql.push_str(" AND t.category_id = ?");
+            params.push(Box::new(category_id.clone()));
+        }
     }
     if let Some(ref start_date) = filter.start_date {
         sql.push_str(" AND t.date >= ?");
@@ -118,8 +122,12 @@ pub fn get_transaction_count(
         params.push(Box::new(account_id.clone()));
     }
     if let Some(ref category_id) = filter.category_id {
-        sql.push_str(" AND t.category_id = ?");
-        params.push(Box::new(category_id.clone()));
+        if category_id == "cat-uncategorized" {
+            sql.push_str(" AND (t.category_id IS NULL OR t.category_id = 'cat-uncategorized')");
+        } else {
+            sql.push_str(" AND t.category_id = ?");
+            params.push(Box::new(category_id.clone()));
+        }
     }
     if let Some(ref start_date) = filter.start_date {
         sql.push_str(" AND t.date >= ?");

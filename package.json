@@ -4,9 +4,9 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
+    "dev": "vite --configLoader native",
+    "build": "tsc && vite build --configLoader native",
+    "preview": "vite preview --configLoader native",
     "tauri": "tauri"
   },
   "keywords": [],

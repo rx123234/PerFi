@@ -24,7 +24,7 @@ const CORE_FIXED_COLOR = "var(--chart-1)";
 
 function shortMonth(isoMonth: string): string {
   const date = new Date(`${isoMonth}-01T00:00:00`);
-  return date.toLocaleString("en-US", { month: "short" });
+  return date.toLocaleString(undefined, { month: "short" });
 }
 
 function isHighVariance(amount: number, avg: number): boolean {
@@ -374,11 +374,15 @@ function MegaGroupRows({
     <>
       {/* Mega header row */}
       <tr
-        className="border-b border-border bg-secondary/20 hover:bg-secondary/40 transition-colors cursor-pointer"
-        onClick={() => onToggle(megaKey)}
+        className="border-b border-border bg-secondary/20 hover:bg-secondary/40 transition-colors"
       >
         <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onToggle(megaKey)}
+            aria-expanded={isOpen}
+            className="flex w-full items-center gap-2 text-left"
+          >
             {isOpen ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
             ) : (
@@ -387,7 +391,7 @@ function MegaGroupRows({
             <span className="w-3 h-3 rounded-sm shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600" />
             <span className="font-bold text-sm">{mega.label}</span>
             <span className="text-muted-foreground text-xs">({mega.categories.length} categories)</span>
-          </div>
+          </button>
         </td>
         {mega.monthlyTotals.map((total, i) => (
           <td key={i} className="text-right px-3 py-3 font-bold whitespace-nowrap">
@@ -466,11 +470,15 @@ function CategoryRows({
     <>
       {/* Category summary row */}
       <tr
-        className="border-b border-border hover:bg-secondary/40 transition-colors cursor-pointer"
-        onClick={onToggle}
+        className="border-b border-border hover:bg-secondary/40 transition-colors"
       >
         <td className={`${padLeft} py-2.5`}>
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={isOpen}
+            className="flex w-full items-center gap-2 text-left"
+          >
             {isOpen ? (
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             ) : (
@@ -479,7 +487,7 @@ function CategoryRows({
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
             <span className="font-medium">{group.category}</span>
             <span className="text-muted-foreground text-xs">({group.items.length})</span>
-          </div>
+          </button>
         </td>
         {group.monthlyTotals.map((total, i) => (
           <td key={i} className="text-right px-3 py-2.5 font-medium whitespace-nowrap">

@@ -22,7 +22,7 @@ import type { SpendingBreakdown, SpendingCategoryData } from "@/lib/types";
 function formatMonth(ym: string, short = false): string {
   const [year, month] = ym.split("-");
   const date = new Date(Number(year), Number(month) - 1, 1);
-  const mon = date.toLocaleString("en-US", { month: "short" });
+  const mon = date.toLocaleString(undefined, { month: "short" });
   return short ? mon : `${mon} '${String(year).slice(2)}`;
 }
 

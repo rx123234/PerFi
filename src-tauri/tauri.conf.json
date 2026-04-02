@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.perfi.app",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' https://cdn.teller.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.teller.io; frame-src https://connect.teller.io"
+      "csp": "default-src 'self'; script-src 'self' https://cdn.teller.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.teller.io; frame-src https://connect.teller.io https://teller.io https://*.teller.io"
     }
   }
 }

@@ -102,6 +102,16 @@ pub fn get_csv_formats() -> Vec<CsvFormat> {
 
         },
         CsvFormat {
+            name: "Ally Bank".to_string(),
+            date_column: "Date".to_string(),
+            date_format: "%Y-%m-%d".to_string(),
+            description_column: "Description".to_string(),
+            amount_column: Some("Amount".to_string()),
+            debit_column: None,
+            credit_column: None,
+            amount_inverted: false,
+        },
+        CsvFormat {
             name: "Wells Fargo".to_string(),
             date_column: "Date".to_string(),
             date_format: "%m/%d/%Y".to_string(),

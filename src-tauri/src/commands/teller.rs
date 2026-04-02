@@ -34,6 +34,12 @@ struct TellerTransaction {
 }
 
 #[derive(Deserialize)]
+struct TellerBalance {
+    available: Option<String>,
+    ledger: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct TellerTransactionDetails {
     category: Option<String>,
     counterparty: Option<TellerCounterparty>,
@@ -391,70 +397,95 @@ pub async fn sync_transactions(
     let newest_tx_id = transactions[0].id.clone();
     let mut added = 0usize;
 
-    let conn = state.0.lock().map_err(|e| e.to_string())?;
-    let cat_rules = crate::categorize::rules::load_rules(&conn);
-    conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
+    // DB work in a block so MutexGuard is dropped before the next .await
+    {
+        let conn = state.0.lock().map_err(|e| e.to_string())?;
+        let cat_rules = crate::categorize::rules::load_rules(&conn);
+        conn.execute_batch("BEGIN TRANSACTION").map_err(|e| e.to_string())?;
 
-    let db_result = (|| -> Result<(), String> {
-        for tx in &transactions {
-            // Teller amounts: negative = debit (money out), positive = credit (money in)
-            let amount: f64 = tx
-                .amount
-                .parse()
-                .map_err(|e| format!("Invalid amount '{}': {}", tx.amount, e))?;
-            if !amount.is_finite() {
-                return Err(format!("Invalid transaction amount: '{}'", tx.amount));
+        let db_result = (|| -> Result<(), String> {
+            for tx in &transactions {
+                let amount: f64 = tx
+                    .amount
+                    .parse()
+                    .map_err(|e| format!("Invalid amount '{}': {}", tx.amount, e))?;
+                if !amount.is_finite() {
+                    return Err(format!("Invalid transaction amount: '{}'", tx.amount));
+                }
+                let amount_cents = (amount * 100.0).round() as i64;
+                let merchant = tx.details.counterparty.as_ref().and_then(|c| c.name.clone());
+                let category_id = crate::categorize::rules::categorize_with_rules(
+                    &cat_rules, &tx.description, &merchant,
+                ).or_else(|| map_teller_category(&tx.details.category));
+                let pending = tx.status == "pending";
+                let id = Uuid::new_v4().to_string();
+
+                conn.execute(
+                    "INSERT OR IGNORE INTO transactions
+                     (id, account_id, date, amount_cents, description, merchant, teller_tx_id,
+                      category_id, source, pending)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'teller', ?9)",
+                    rusqlite::params![
+                        id, account_id, tx.date, amount_cents, tx.description,
+                        merchant, tx.id, category_id, pending as i32,
+                    ],
+                )
+                .map_err(|e| e.to_string())?;
+
+                if conn.changes() > 0 {
+                    added += 1;
+                }
             }
-            let amount_cents = (amount * 100.0).round() as i64;
-            let merchant = tx.details.counterparty.as_ref().and_then(|c| c.name.clone());
-            // Try category_rules first (more specific), then fall back to Teller's category
-            let category_id = crate::categorize::rules::categorize_with_rules(
-                &cat_rules, &tx.description, &merchant,
-            ).or_else(|| map_teller_category(&tx.details.category));
-            let pending = tx.status == "pending";
-            let id = Uuid::new_v4().to_string();
 
             conn.execute(
-                "INSERT OR IGNORE INTO transactions
-                 (id, account_id, date, amount_cents, description, merchant, teller_tx_id,
-                  category_id, source, pending)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'teller', ?9)",
-                rusqlite::params![
-                    id,
-                    account_id,
-                    tx.date,
-                    amount_cents,
-                    tx.description,
-                    merchant,
-                    tx.id,
-                    category_id,
-                    pending as i32,
-                ],
+                "UPDATE accounts SET teller_last_tx_id = ?1 WHERE id = ?2",
+                rusqlite::params![newest_tx_id, account_id],
             )
             .map_err(|e| e.to_string())?;
 
-            if conn.changes() > 0 {
-                added += 1;
+            Ok(())
+        })();
+
+        match db_result {
+            Ok(()) => {
+                conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+            }
+            Err(e) => {
+                let _ = conn.execute_batch("ROLLBACK");
+                return Err(e);
             }
         }
+    } // conn dropped here
 
-        conn.execute(
-            "UPDATE accounts SET teller_last_tx_id = ?1 WHERE id = ?2",
-            rusqlite::params![newest_tx_id, account_id],
-        )
-        .map_err(|e| e.to_string())?;
-
-        Ok(())
-    })();
-
-    match db_result {
-        Ok(()) => {
-            conn.execute_batch("COMMIT").map_err(|e| e.to_string())?;
+    // Fetch the actual balance from Teller (separate async block, no DB lock held)
+    let balance_result: Option<(Option<i64>, Option<i64>)> = {
+        let bal_url = format!("https://api.teller.io/accounts/{}/balances", teller_account_id);
+        match client.get(&bal_url).basic_auth(&access_token, Some("")).send().await {
+            Ok(resp) if resp.status().is_success() => {
+                match resp.json::<TellerBalance>().await {
+                    Ok(balance) => {
+                        let ledger = balance.ledger.as_ref()
+                            .and_then(|s| s.parse::<f64>().ok())
+                            .map(|v| (v * 100.0).round() as i64);
+                        let available = balance.available.as_ref()
+                            .and_then(|s| s.parse::<f64>().ok())
+                            .map(|v| (v * 100.0).round() as i64);
+                        Some((ledger, available))
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
         }
-        Err(e) => {
-            let _ = conn.execute_batch("ROLLBACK");
-            return Err(e);
-        }
+    };
+
+    // Store balance (now safe to lock DB — no awaits after this)
+    if let Some((ledger_cents, available_cents)) = balance_result {
+        let conn = state.0.lock().map_err(|e| e.to_string())?;
+        let _ = conn.execute(
+            "UPDATE accounts SET balance_cents = ?1, balance_available_cents = ?2, balance_updated_at = datetime('now') WHERE id = ?3",
+            rusqlite::params![ledger_cents, available_cents, account_id],
+        );
     }
 
     Ok(SyncResult { added, modified: 0, removed: 0 })
@@ -482,4 +513,60 @@ pub async fn sync_all_accounts(
         results.push((acc_id, result));
     }
     Ok(results)
+}
+
+#[tauri::command]
+pub async fn sync_balances_only(
+    state: State<'_, DbState>,
+) -> Result<usize, String> {
+    let accounts: Vec<(String, String, String)> = {
+        let conn = state.0.lock().map_err(|e| e.to_string())?;
+        let config = get_config(&conn)?;
+        let mut stmt = conn
+            .prepare("SELECT id, teller_account_id, teller_access_token FROM accounts WHERE source = 'teller' AND teller_account_id IS NOT NULL")
+            .map_err(|e| e.to_string())?;
+        let rows: Vec<(String, String, String)> = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+        // Store config for later use
+        let _ = config;
+        rows
+    };
+
+    let config = {
+        let conn = state.0.lock().map_err(|e| e.to_string())?;
+        get_config(&conn)?
+    };
+
+    let client = build_teller_client(&config.cert_path, &config.key_path)?;
+    let mut updated = 0usize;
+
+    for (account_id, teller_account_id, access_token) in &accounts {
+        let bal_url = format!("https://api.teller.io/accounts/{}/balances", teller_account_id);
+        match client.get(&bal_url).basic_auth(access_token, Some("")).send().await {
+            Ok(resp) if resp.status().is_success() => {
+                if let Ok(balance) = resp.json::<TellerBalance>().await {
+                    let ledger = balance.ledger.as_ref()
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .map(|v| (v * 100.0).round() as i64);
+                    let available = balance.available.as_ref()
+                        .and_then(|s| s.parse::<f64>().ok())
+                        .map(|v| (v * 100.0).round() as i64);
+                    let conn = state.0.lock().map_err(|e| e.to_string())?;
+                    conn.execute(
+                        "UPDATE accounts SET balance_cents = ?1, balance_available_cents = ?2, balance_updated_at = datetime('now') WHERE id = ?3",
+                        rusqlite::params![ledger, available, account_id],
+                    ).map_err(|e| e.to_string())?;
+                    updated += 1;
+                }
+            }
+            _ => {
+                eprintln!("Warning: failed to fetch balance for {}", account_id);
+            }
+        }
+    }
+
+    Ok(updated)
 }

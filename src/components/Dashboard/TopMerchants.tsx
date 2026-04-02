@@ -21,21 +21,22 @@ export default function TopMerchants({ data }: Props) {
     );
   }
 
-  const chartData = data.slice(0, 10).map((m) => ({
-    name: m.merchant.length > 20 ? m.merchant.slice(0, 20) + "..." : m.merchant,
+  const chartData = data.slice(0, 8).map((m) => ({
+    name: m.merchant.length > 18 ? `${m.merchant.slice(0, 18)}…` : m.merchant,
     amount: m.amount,
     count: m.count,
   }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">Top Merchants</CardTitle>
+    <Card className="h-full">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base font-semibold">Top Merchants</CardTitle>
+        <p className="text-sm text-muted-foreground">Largest counterparties by spend for the selected period.</p>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
+        <div className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
+            <BarChart data={chartData} layout="vertical" barCategoryGap={12} margin={{ top: 6, right: 8, bottom: 6, left: 8 }}>
               <XAxis
                 type="number"
                 tickFormatter={(v) => `$${v}`}
@@ -47,9 +48,10 @@ export default function TopMerchants({ data }: Props) {
                 type="category"
                 dataKey="name"
                 tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                width={80}
+                width={120}
                 axisLine={false}
                 tickLine={false}
+                interval={0}
               />
               <Tooltip
                 formatter={(value) => formatCurrency(Number(value))}
@@ -61,7 +63,7 @@ export default function TopMerchants({ data }: Props) {
                   fontSize: "13px",
                 }}
               />
-              <Bar dataKey="amount" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="amount" fill="var(--chart-1)" radius={[0, 10, 10, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
