@@ -10,15 +10,19 @@ jobs:
   build-and-test:
     runs-on: windows-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -37,4 +41,3 @@ jobs:
 
       - name: Run Playwright tests
         run: npx playwright test
-

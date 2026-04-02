@@ -4,9 +4,9 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "vite --configLoader native",
-    "build": "tsc && vite build --configLoader native",
-    "preview": "vite preview --configLoader native",
+    "dev": "vite --configLoader runner",
+    "build": "tsc && vite build --configLoader runner",
+    "preview": "vite preview --configLoader runner",
     "tauri": "tauri",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed"

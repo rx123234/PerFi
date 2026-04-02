@@ -23,3 +23,7 @@ Thumbs.db
 src-tauri/gen/
 playwright-report/
 test-results/
+screenshots/
+tmp_exe_icon.png
+tmp_exe_icon_after_clean.png
+tmp_ico_icon.png
