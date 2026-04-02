@@ -19,6 +19,39 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "alerts", label: "Alerts" },
 ];
 
+const FILTER_COPY: Record<FilterKey, { title: string; description: string; button: string; copyHint: string }> = {
+  all: {
+    title: "AI Overview Export",
+    description: "Export a full finance snapshot with saved insights, spending patterns, savings context, and net worth summary.",
+    button: "Prepare Overview for AI",
+    copyHint: "Copy this overview and paste it into your AI assistant for a full-picture review of your finances.",
+  },
+  spending: {
+    title: "AI Spending Export",
+    description: "Export spending-specific data including category concentration, recent trends, anomalies, and saved spending insights.",
+    button: "Prepare Spending Data",
+    copyHint: "Copy this spending snapshot and ask your AI assistant to analyze overspending, merchant concentration, or cleanup opportunities.",
+  },
+  savings: {
+    title: "AI Savings Export",
+    description: "Export savings-specific context including income, spending, savings rate, budget pressure, goal progress, and saved savings insights.",
+    button: "Prepare Savings Data",
+    copyHint: "Copy this savings snapshot and ask your AI assistant to evaluate savings rate, budget leakage, and surplus allocation.",
+  },
+  milestones: {
+    title: "AI Milestones Export",
+    description: "Export milestone-specific context including net worth, goal progress, and saved milestone signals.",
+    button: "Prepare Milestone Data",
+    copyHint: "Copy this milestone snapshot and ask your AI assistant to review progress toward major financial targets.",
+  },
+  alerts: {
+    title: "AI Alerts Export",
+    description: "Export alert-focused data including active warning signals, anomalies, budget pressure, and saved alert insights.",
+    button: "Prepare Alert Data",
+    copyHint: "Copy this alert snapshot and ask your AI assistant what needs attention first and what corrective actions matter most.",
+  },
+};
+
 function matchesFilter(insight: Insight, filter: FilterKey): boolean {
   switch (filter) {
     case "all":
@@ -44,7 +77,6 @@ export default function InsightsPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [aiData, setAiData] = useState<string | null>(null);
   const [loadingAiData, setLoadingAiData] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -69,17 +101,10 @@ export default function InsightsPage() {
     loadInsights();
   }, [loadInsights]);
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    try {
-      await api.generateInsights();
-      await loadInsights();
-    } catch (err) {
-      console.error("Failed to generate insights:", err);
-    } finally {
-      setGenerating(false);
-    }
-  };
+  useEffect(() => {
+    setAiData(null);
+    setCopied(false);
+  }, [activeFilter]);
 
   const handleDismiss = async (id: string) => {
     try {
@@ -104,7 +129,7 @@ export default function InsightsPage() {
   const handlePrepareAiData = async () => {
     setLoadingAiData(true);
     try {
-      const data = await api.getInsightDataForAi();
+      const data = await api.getInsightDataForAi(activeFilter);
       setAiData(data);
     } catch (err) {
       console.error("Failed to get AI data:", err);
@@ -125,16 +150,16 @@ export default function InsightsPage() {
   };
 
   const filteredInsights = insights.filter((i) => matchesFilter(i, activeFilter));
+  const aiCopy = FILTER_COPY[activeFilter];
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div>
         <h2 className="text-2xl font-bold">Insights</h2>
-        <Button onClick={handleGenerate} disabled={generating} size="sm">
-          <Sparkles className={cn("h-4 w-4", generating && "animate-pulse")} />
-          {generating ? "Generating…" : "Generate Insights"}
-        </Button>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Review saved signals and export structured data for deeper AI analysis.
+        </p>
       </div>
 
       {/* Filter Tabs */}
@@ -175,11 +200,6 @@ export default function InsightsPage() {
       ) : filteredInsights.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border">
           <Sparkles className="h-8 w-8 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground text-center max-w-xs leading-relaxed">
-            {activeFilter === "all"
-              ? "No insights yet. Click \"Generate Insights\" to analyze your finances."
-              : `No ${activeFilter} insights found.`}
-          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -202,9 +222,9 @@ export default function InsightsPage() {
               <Brain className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold">AI-Powered Analysis</CardTitle>
+              <CardTitle className="text-sm font-semibold">{aiCopy.title}</CardTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Export your financial data for analysis with any AI assistant
+                {aiCopy.description}
               </p>
             </div>
           </div>
@@ -213,7 +233,7 @@ export default function InsightsPage() {
           {!aiData ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Prepare a structured snapshot of your financial data to paste into ChatGPT, Claude, or any AI assistant for personalized analysis. Your data never leaves your device unless you choose to share it.
+                Prepare a structured snapshot tailored to the section you are viewing. Your data stays local unless you choose to paste it into an external AI tool.
               </p>
               <Button
                 variant="outline"
@@ -228,7 +248,7 @@ export default function InsightsPage() {
                     Preparing…
                   </>
                 ) : (
-                  "Prepare Data for AI"
+                  aiCopy.button
                 )}
               </Button>
             </div>
@@ -258,7 +278,7 @@ export default function InsightsPage() {
               </div>
 
               <p className="text-xs text-muted-foreground leading-relaxed border-l-2 border-border pl-3">
-                Copy this data and paste it into your preferred AI assistant for personalized financial analysis. Your data never leaves your device unless you choose to share it.
+                {aiCopy.copyHint}
               </p>
 
               <div className="flex gap-2">

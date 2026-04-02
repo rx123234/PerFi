@@ -22,6 +22,7 @@ export default function TransactionList() {
   const [accountFilter, setAccountFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
+  const [updatingPlanningId, setUpdatingPlanningId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -79,6 +80,18 @@ export default function TransactionList() {
       console.error("Sync failed:", err);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handlePlanningToggle = async (tx: Transaction) => {
+    setUpdatingPlanningId(tx.id);
+    try {
+      await api.updateTransactionPlanningExclusion(tx.id, !tx.exclude_from_planning);
+      await loadData();
+    } catch (err) {
+      console.error("Failed to update planning exclusion:", err);
+    } finally {
+      setUpdatingPlanningId(null);
     }
   };
 
@@ -140,6 +153,7 @@ export default function TransactionList() {
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
                 <th className="text-right p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Source</th>
+                <th className="text-right p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Planning</th>
               </tr>
             </thead>
             <tbody>
@@ -151,7 +165,14 @@ export default function TransactionList() {
                     {tx.merchant && tx.description !== tx.merchant && (
                       <div className="text-xs text-muted-foreground mt-0.5">{tx.description}</div>
                     )}
-                    {tx.pending && <Badge variant="outline" className="ml-2 text-xs">Pending</Badge>}
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {tx.pending && <Badge variant="outline" className="text-xs">Pending</Badge>}
+                      {tx.exclude_from_planning && (
+                        <Badge variant="secondary" className="text-xs">
+                          Excluded from planning
+                        </Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 text-sm">
                     {editingTxId === tx.id ? (
@@ -186,11 +207,31 @@ export default function TransactionList() {
                   <td className="p-3 text-sm">
                     <Badge variant="outline" className="text-xs">{tx.source}</Badge>
                   </td>
+                  <td className="p-3 text-sm text-right">
+                    <Button
+                      type="button"
+                      variant={tx.exclude_from_planning ? "secondary" : "outline"}
+                      size="sm"
+                      disabled={updatingPlanningId === tx.id}
+                      onClick={() => handlePlanningToggle(tx)}
+                      aria-label={
+                        tx.exclude_from_planning
+                          ? `Include ${tx.merchant || tx.description} in planning`
+                          : `Exclude ${tx.merchant || tx.description} from planning`
+                      }
+                    >
+                      {updatingPlanningId === tx.id
+                        ? "Saving..."
+                        : tx.exclude_from_planning
+                          ? "Include"
+                          : "Exclude"}
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     No transactions found. Link an account or import a CSV to get started.
                   </td>
                 </tr>

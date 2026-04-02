@@ -7,7 +7,7 @@ use uuid::Uuid;
 pub fn get_categories(state: State<'_, DbState>) -> Result<Vec<Category>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, parent_id, color, icon FROM categories ORDER BY name")
+        .prepare("SELECT id, name, parent_id, color, icon, exclude_from_planning FROM categories ORDER BY name")
         .map_err(|e| e.to_string())?;
 
     let categories = stmt
@@ -18,6 +18,7 @@ pub fn get_categories(state: State<'_, DbState>) -> Result<Vec<Category>, String
                 parent_id: row.get(2)?,
                 color: row.get(3)?,
                 icon: row.get(4)?,
+                exclude_from_planning: row.get::<_, i32>(5)? != 0,
             })
         })
         .map_err(|e| e.to_string())?
@@ -57,6 +58,7 @@ pub fn create_category(
         parent_id,
         color,
         icon: None,
+        exclude_from_planning: false,
     })
 }
 
@@ -100,6 +102,25 @@ pub fn delete_category(state: State<'_, DbState>, id: String) -> Result<(), Stri
             Err(e.to_string())
         }
     }
+}
+
+#[tauri::command]
+pub fn update_category_planning_exclusion(
+    state: State<'_, DbState>,
+    category_id: String,
+    exclude_from_planning: bool,
+) -> Result<(), String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let rows = conn
+        .execute(
+            "UPDATE categories SET exclude_from_planning = ?1 WHERE id = ?2",
+            rusqlite::params![exclude_from_planning as i32, category_id],
+        )
+        .map_err(|e| e.to_string())?;
+    if rows == 0 {
+        return Err("Category not found".to_string());
+    }
+    Ok(())
 }
 
 #[tauri::command]

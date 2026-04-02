@@ -20,6 +20,7 @@ pub struct Category {
     pub parent_id: Option<String>,
     pub color: Option<String>,
     pub icon: Option<String>,
+    pub exclude_from_planning: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,6 +36,7 @@ pub struct Transaction {
     pub merchant: Option<String>,
     pub source: String,
     pub pending: bool,
+    pub exclude_from_planning: bool,
     pub created_at: String,
 }
 

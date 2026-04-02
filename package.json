@@ -7,7 +7,9 @@
     "dev": "vite --configLoader native",
     "build": "tsc && vite build --configLoader native",
     "preview": "vite preview --configLoader native",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +17,7 @@
   "packageManager": "pnpm@10.29.3",
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
+    "@playwright/test": "^1.55.0",
     "@tauri-apps/cli": "^2.10.1",
     "@types/d3-sankey": "^0.12.5",
     "@types/d3-shape": "^3.1.8",

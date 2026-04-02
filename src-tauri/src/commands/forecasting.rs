@@ -8,6 +8,8 @@ use tauri::State;
 
 const NO_TRANSFER: &str =
     "t.category_id NOT IN (SELECT id FROM categories WHERE name = 'Transfer')";
+const INCLUDED_IN_PLANNING: &str =
+    "COALESCE(t.exclude_from_planning, 0) = 0 AND COALESCE(c.exclude_from_planning, 0) = 0";
 
 fn income_pred() -> &'static str {
     "a.account_type = 'checking' AND t.amount_cents > 0"
@@ -283,10 +285,12 @@ pub fn get_cash_flow_forecast(
          WHERE {income_pred}
            AND t.date >= ?1 AND t.date < ?2
            AND t.pending = 0
+           AND {included_in_planning}
            AND {no_transfer}
          GROUP BY month
          ORDER BY month",
         income_pred = income_pred(),
+        included_in_planning = INCLUDED_IN_PLANNING,
         no_transfer = NO_TRANSFER,
     );
 
@@ -300,11 +304,13 @@ pub fn get_cash_flow_forecast(
            AND t.date >= ?1 AND t.date < ?2
            AND t.pending = 0
            AND COALESCE(c.name, '') != 'Income'
+           AND {included_in_planning}
            AND {no_transfer}
          GROUP BY month
          ORDER BY month",
         spending_amount = spending_amount(),
         spending_pred = spending_pred(),
+        included_in_planning = INCLUDED_IN_PLANNING,
         no_transfer = NO_TRANSFER,
     );
 
@@ -334,9 +340,11 @@ pub fn get_cash_flow_forecast(
          WHERE {income_pred}
            AND t.date >= ?1 AND t.date < ?2
            AND t.pending = 0
+           AND {included_in_planning}
            AND {no_transfer}
          ORDER BY t.date",
         income_pred = income_pred(),
+        included_in_planning = INCLUDED_IN_PLANNING,
         no_transfer = NO_TRANSFER,
     );
 
@@ -351,10 +359,12 @@ pub fn get_cash_flow_forecast(
            AND t.date >= ?1 AND t.date < ?2
            AND t.pending = 0
            AND COALESCE(c.name, '') != 'Income'
+           AND {included_in_planning}
            AND {no_transfer}
          ORDER BY t.date",
         spending_amount = spending_amount(),
         spending_pred = spending_pred(),
+        included_in_planning = INCLUDED_IN_PLANNING,
         no_transfer = NO_TRANSFER,
     );
 
@@ -647,11 +657,13 @@ pub fn get_upcoming_bills(
                AND t.date >= ?1 AND t.date <= ?2
                AND t.pending = 0
                AND COALESCE(c.name, '') NOT IN ('Transfer', 'Income')
+               AND {included_in_planning}
                AND {no_transfer}
              GROUP BY merchant_name
              HAVING month_count >= 2
              ORDER BY merchant_name",
             spending_pred = spending_pred(),
+            included_in_planning = INCLUDED_IN_PLANNING,
             no_transfer = NO_TRANSFER,
         ))
         .map_err(|e| e.to_string())?;
@@ -673,14 +685,18 @@ pub fn get_upcoming_bills(
                 "SELECT t.date, ABS(t.amount_cents)
                  FROM transactions t
                  JOIN accounts a ON t.account_id = a.id
+                 LEFT JOIN categories c ON t.category_id = c.id
                  WHERE COALESCE(t.merchant, t.description) = ?1
                    AND ({spending_pred})
                    AND t.date >= ?2 AND t.date <= ?3
                    AND t.pending = 0
+                   AND COALESCE(c.name, '') != 'Income'
+                   AND {included_in_planning}
                    AND {no_transfer}
                  ORDER BY t.date DESC
                  LIMIT 8",
                 spending_pred = spending_pred(),
+                included_in_planning = INCLUDED_IN_PLANNING,
                 no_transfer = NO_TRANSFER,
             ))
             .map_err(|e| e.to_string())?;
@@ -809,6 +825,7 @@ pub fn get_seasonal_patterns(state: State<'_, DbState>) -> Result<Vec<SeasonalPa
                  WHERE ({spending_pred})
                    AND t.pending = 0
                    AND COALESCE(c.name, '') != 'Income'
+                   AND {included_in_planning}
                    AND {no_transfer}
                  GROUP BY calendar_month, period
              )
@@ -816,6 +833,7 @@ pub fn get_seasonal_patterns(state: State<'_, DbState>) -> Result<Vec<SeasonalPa
              ORDER BY calendar_month",
             spending_amount = spending_amount(),
             spending_pred = spending_pred(),
+            included_in_planning = INCLUDED_IN_PLANNING,
             no_transfer = NO_TRANSFER,
         ))
         .map_err(|e| e.to_string())?;

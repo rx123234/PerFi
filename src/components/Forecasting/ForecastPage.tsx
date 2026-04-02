@@ -820,12 +820,13 @@ export default function ForecastPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
             Trust notes
           </p>
-          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <p>Forecast is estimated, not actual. Use the range, not just the midpoint.</p>
-            <p>Recurring bills come from recent cadence detection and will improve as more history arrives.</p>
-            <p>Best results come from clean categories, stable account imports, and confirmed recurring cash flow.</p>
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <p>Forecast is estimated, not actual. Use the range, not just the midpoint.</p>
+              <p>Recurring bills come from recent cadence detection and will improve as more history arrives.</p>
+              <p>Transactions and categories marked excluded from planning are ignored in these projections.</p>
+              <p>Best results come from clean categories, stable account imports, and confirmed recurring cash flow.</p>
+            </div>
           </div>
-        </div>
       </div>
 
       {loading ? (

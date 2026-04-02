@@ -11,7 +11,7 @@ pub fn get_transactions(
 
     let mut sql = String::from(
         "SELECT t.id, t.account_id, t.date, CAST(t.amount_cents AS REAL) / 100.0, t.description, t.enriched_desc,
-                t.category_id, c.name as category_name, t.merchant, t.source, t.pending, t.created_at
+                t.category_id, c.name as category_name, t.merchant, t.source, t.pending, t.exclude_from_planning, t.created_at
          FROM transactions t
          LEFT JOIN categories c ON t.category_id = c.id
          WHERE 1=1",
@@ -72,7 +72,8 @@ pub fn get_transactions(
                 merchant: row.get(8)?,
                 source: row.get(9)?,
                 pending: row.get::<_, i32>(10)? != 0,
-                created_at: row.get(11)?,
+                exclude_from_planning: row.get::<_, i32>(11)? != 0,
+                created_at: row.get(12)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -99,6 +100,25 @@ pub fn update_transaction_category(
         .execute(
             "UPDATE transactions SET category_id = ?1 WHERE id = ?2",
             rusqlite::params![category_id, transaction_id],
+        )
+        .map_err(|e| e.to_string())?;
+    if rows == 0 {
+        return Err(format!("Transaction not found: {}", transaction_id));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_transaction_planning_exclusion(
+    state: State<'_, DbState>,
+    transaction_id: String,
+    exclude_from_planning: bool,
+) -> Result<(), String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let rows = conn
+        .execute(
+            "UPDATE transactions SET exclude_from_planning = ?1 WHERE id = ?2",
+            rusqlite::params![exclude_from_planning as i32, transaction_id],
         )
         .map_err(|e| e.to_string())?;
     if rows == 0 {

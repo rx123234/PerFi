@@ -529,8 +529,12 @@ pub fn generate_insights(state: State<'_, DbState>) -> Result<Vec<Insight>, Stri
 }
 
 #[tauri::command]
-pub fn get_insight_data_for_ai(state: State<'_, DbState>) -> Result<String, String> {
+pub fn get_insight_data_for_ai(
+    state: State<'_, DbState>,
+    filter: Option<String>,
+) -> Result<String, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let filter = filter.unwrap_or_else(|| "all".to_string());
 
     let now = Utc::now().date_naive();
     let current_month_start = format!("{}-{:02}-01", now.year(), now.month());
@@ -785,21 +789,102 @@ pub fn get_insight_data_for_ai(state: State<'_, DbState>) -> Result<String, Stri
         })
         .collect();
 
-    let summary = json!({
-        "net_worth": {
-            "assets": total_assets_cents as f64 / 100.0,
-            "liabilities": total_liabilities_cents as f64 / 100.0,
-            "net": net_worth_cents as f64 / 100.0
-        },
-        "monthly_income": monthly_income,
-        "monthly_spending": monthly_spending,
-        "savings_rate": savings_rate,
-        "top_spending_categories": top_categories,
-        "spending_trends": spending_trends,
-        "budget_status": budget_status,
-        "goals_progress": goals_progress,
-        "recent_anomalies": recent_anomalies
-    });
+    let mut saved_insights_stmt = conn
+        .prepare(
+            "SELECT insight_type, title, body, severity, is_read, created_at
+             FROM insights
+             WHERE is_dismissed = 0
+             ORDER BY created_at DESC
+             LIMIT 25",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let saved_insights: Vec<serde_json::Value> = saved_insights_stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, bool>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .filter(|(insight_type, _title, _body, severity, _is_read, _created_at)| match filter.as_str() {
+            "spending" => matches!(insight_type.as_str(), "spending_alert" | "anomaly"),
+            "savings" => matches!(insight_type.as_str(), "savings_trend" | "lifestyle_inflation"),
+            "milestones" => insight_type == "milestone",
+            "alerts" => matches!(severity.as_str(), "warning" | "action_needed"),
+            _ => true,
+        })
+        .map(|(insight_type, title, body, severity, is_read, created_at)| {
+            json!({
+                "type": insight_type,
+                "title": title,
+                "body": body,
+                "severity": severity,
+                "is_read": is_read,
+                "created_at": created_at
+            })
+        })
+        .collect();
+
+    let summary = match filter.as_str() {
+        "spending" => json!({
+            "section": "spending",
+            "monthly_spending": monthly_spending,
+            "top_spending_categories": top_categories,
+            "spending_trends": spending_trends,
+            "recent_anomalies": recent_anomalies,
+            "saved_insights": saved_insights
+        }),
+        "savings" => json!({
+            "section": "savings",
+            "monthly_income": monthly_income,
+            "monthly_spending": monthly_spending,
+            "savings_rate": savings_rate,
+            "budget_status": budget_status,
+            "goals_progress": goals_progress,
+            "saved_insights": saved_insights
+        }),
+        "milestones" => json!({
+            "section": "milestones",
+            "net_worth": {
+                "assets": total_assets_cents as f64 / 100.0,
+                "liabilities": total_liabilities_cents as f64 / 100.0,
+                "net": net_worth_cents as f64 / 100.0
+            },
+            "goals_progress": goals_progress,
+            "saved_insights": saved_insights
+        }),
+        "alerts" => json!({
+            "section": "alerts",
+            "monthly_income": monthly_income,
+            "monthly_spending": monthly_spending,
+            "budget_status": budget_status,
+            "recent_anomalies": recent_anomalies,
+            "saved_insights": saved_insights
+        }),
+        _ => json!({
+            "section": "all",
+            "net_worth": {
+                "assets": total_assets_cents as f64 / 100.0,
+                "liabilities": total_liabilities_cents as f64 / 100.0,
+                "net": net_worth_cents as f64 / 100.0
+            },
+            "monthly_income": monthly_income,
+            "monthly_spending": monthly_spending,
+            "savings_rate": savings_rate,
+            "top_spending_categories": top_categories,
+            "spending_trends": spending_trends,
+            "budget_status": budget_status,
+            "goals_progress": goals_progress,
+            "recent_anomalies": recent_anomalies,
+            "saved_insights": saved_insights
+        }),
+    };
 
     serde_json::to_string_pretty(&summary).map_err(|e| e.to_string())
 }

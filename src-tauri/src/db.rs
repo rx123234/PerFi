@@ -164,6 +164,18 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         eprintln!("Applied migration 005_account_balances.sql");
     }
 
+    if !applied.contains(&6) {
+        let migration = include_str!("../migrations/006_planning_exclusions.sql");
+        conn.execute_batch(migration)
+            .map_err(|e| format!("Failed to run migration 006: {}", e))?;
+        conn.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?1)",
+            [6],
+        )
+        .map_err(|e| format!("Failed to record migration: {}", e))?;
+        eprintln!("Applied migration 006_planning_exclusions.sql");
+    }
+
     Ok(())
 }
 
@@ -195,5 +207,107 @@ pub fn delete_secret(key: &str) -> Result<(), String> {
         Ok(()) => Ok(()),
         Err(keyring::Error::NoEntry) => Ok(()), // Already gone
         Err(e) => Err(format!("Failed to delete secret: {}", e)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run_migrations;
+    use rusqlite::Connection;
+
+    #[test]
+    fn planning_exclusion_migration_adds_columns_with_default_zero() {
+        let conn = Connection::open_in_memory().expect("in-memory db");
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );",
+        )
+        .expect("create schema_migrations");
+
+        conn.execute_batch(include_str!("../migrations/001_initial.sql"))
+            .expect("apply 001");
+        conn.execute("INSERT INTO schema_migrations (version) VALUES (1)", [])
+            .expect("record 001");
+        conn.execute_batch(include_str!("../migrations/002_teller.sql"))
+            .expect("apply 002");
+        conn.execute("INSERT INTO schema_migrations (version) VALUES (2)", [])
+            .expect("record 002");
+        conn.execute_batch(include_str!("../migrations/003_fix_categories.sql"))
+            .expect("apply 003");
+        conn.execute("INSERT INTO schema_migrations (version) VALUES (3)", [])
+            .expect("record 003");
+        conn.execute_batch(include_str!("../migrations/004_wealth_planning.sql"))
+            .expect("apply 004");
+        conn.execute("INSERT INTO schema_migrations (version) VALUES (4)", [])
+            .expect("record 004");
+        conn.execute_batch(include_str!("../migrations/005_account_balances.sql"))
+            .expect("apply 005");
+        conn.execute("INSERT INTO schema_migrations (version) VALUES (5)", [])
+            .expect("record 005");
+
+        run_migrations(&conn).expect("apply planning exclusion migration");
+
+        let tx_column_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name = 'exclude_from_planning'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("transactions column count");
+        let category_column_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('categories') WHERE name = 'exclude_from_planning'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("categories column count");
+
+        assert_eq!(tx_column_count, 1);
+        assert_eq!(category_column_count, 1);
+
+        conn.execute(
+            "INSERT INTO accounts (id, name, account_type, source) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params!["acc-1", "Checking", "checking", "manual"],
+        )
+        .expect("insert account");
+        conn.execute(
+            "INSERT INTO categories (id, name) VALUES (?1, ?2)",
+            rusqlite::params!["cat-1", "Planning Test Category"],
+        )
+        .expect("insert category");
+        conn.execute(
+            "INSERT INTO transactions (id, account_id, date, amount_cents, description, category_id, source)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![
+                "tx-1",
+                "acc-1",
+                "2026-03-01",
+                "-120000",
+                "Rent",
+                "cat-1",
+                "manual",
+            ],
+        )
+        .expect("insert transaction");
+
+        let category_default: i64 = conn
+            .query_row(
+                "SELECT exclude_from_planning FROM categories WHERE id = 'cat-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("category default");
+        let transaction_default: i64 = conn
+            .query_row(
+                "SELECT exclude_from_planning FROM transactions WHERE id = 'tx-1'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("transaction default");
+
+        assert_eq!(category_default, 0);
+        assert_eq!(transaction_default, 0);
     }
 }

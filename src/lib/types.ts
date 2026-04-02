@@ -16,6 +16,7 @@ export interface Category {
   parent_id: string | null;
   color: string | null;
   icon: string | null;
+  exclude_from_planning: boolean;
 }
 
 export interface Transaction {
@@ -30,6 +31,7 @@ export interface Transaction {
   merchant: string | null;
   source: string;
   pending: boolean;
+  exclude_from_planning: boolean;
   created_at: string;
 }
 

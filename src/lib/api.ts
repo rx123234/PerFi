@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type {
   Account,
   AccountBalance,
@@ -40,6 +40,22 @@ import type {
   InvestmentImportResult,
 } from "./types";
 
+type InvokeArgs = Record<string, unknown> | undefined;
+
+declare global {
+  interface Window {
+    __PERFI_TEST_INVOKE__?: (command: string, args?: InvokeArgs) => Promise<unknown>;
+  }
+}
+
+const invoke = <T>(command: string, args?: InvokeArgs): Promise<T> => {
+  const testInvoke = typeof window !== "undefined" ? window.__PERFI_TEST_INVOKE__ : undefined;
+  if (testInvoke) {
+    return testInvoke(command, args) as Promise<T>;
+  }
+  return tauriInvoke<T>(command, args);
+};
+
 // Accounts
 export const getAccounts = () => invoke<Account[]>("get_accounts");
 export const createAccount = (name: string, institution: string | null, accountType: string) =>
@@ -53,6 +69,8 @@ export const getTransactions = (filter: TransactionFilter) =>
   invoke<Transaction[]>("get_transactions", { filter });
 export const updateTransactionCategory = (transactionId: string, categoryId: string | null) =>
   invoke<void>("update_transaction_category", { transactionId, categoryId });
+export const updateTransactionPlanningExclusion = (transactionId: string, excludeFromPlanning: boolean) =>
+  invoke<void>("update_transaction_planning_exclusion", { transactionId, excludeFromPlanning });
 export const getTransactionCount = (filter: TransactionFilter) =>
   invoke<number>("get_transaction_count", { filter });
 
@@ -62,6 +80,8 @@ export const createCategory = (name: string, color: string | null, parentId: str
   invoke<Category>("create_category", { name, color, parentId });
 export const updateCategory = (id: string, name: string, color: string | null) =>
   invoke<void>("update_category", { id, name, color });
+export const updateCategoryPlanningExclusion = (categoryId: string, excludeFromPlanning: boolean) =>
+  invoke<void>("update_category_planning_exclusion", { categoryId, excludeFromPlanning });
 export const deleteCategory = (id: string) => invoke<void>("delete_category", { id });
 
 // Category Rules
@@ -188,8 +208,8 @@ export const getRetirementScenarios = () => invoke<RetirementScenario[]>("get_re
 export const getInsights = (unreadOnly: boolean) => invoke<Insight[]>("get_insights", { unreadOnly });
 export const dismissInsight = (id: string) => invoke<void>("dismiss_insight", { id });
 export const markInsightRead = (id: string) => invoke<void>("mark_insight_read", { id });
-export const generateInsights = () => invoke<Insight[]>("generate_insights");
-export const getInsightDataForAi = () => invoke<string>("get_insight_data_for_ai");
+export const getInsightDataForAi = (filter: string) =>
+  invoke<string>("get_insight_data_for_ai", { filter });
 
 // Forecasting
 export const getCashFlowForecast = (months: number) => invoke<ForecastPoint[]>("get_cash_flow_forecast", { months });

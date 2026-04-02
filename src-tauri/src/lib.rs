@@ -32,11 +32,13 @@ pub fn run() {
             // Transactions
             commands::transactions::get_transactions,
             commands::transactions::update_transaction_category,
+            commands::transactions::update_transaction_planning_exclusion,
             commands::transactions::get_transaction_count,
             // Categories
             commands::categories::get_categories,
             commands::categories::create_category,
             commands::categories::update_category,
+            commands::categories::update_category_planning_exclusion,
             commands::categories::delete_category,
             commands::categories::get_category_rules,
             commands::categories::create_category_rule,

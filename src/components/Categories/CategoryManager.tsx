@@ -15,6 +15,7 @@ export default function CategoryManager() {
   const [newRulePattern, setNewRulePattern] = useState("");
   const [newRuleCategoryId, setNewRuleCategoryId] = useState("");
   const [recatCount, setRecatCount] = useState<number | null>(null);
+  const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -61,6 +62,21 @@ export default function CategoryManager() {
     setRecatCount(count);
   };
 
+  const handlePlanningToggle = async (category: Category) => {
+    setUpdatingCategoryId(category.id);
+    try {
+      await api.updateCategoryPlanningExclusion(
+        category.id,
+        !category.exclude_from_planning
+      );
+      await loadData();
+    } catch (err) {
+      console.error("Failed to update category planning exclusion:", err);
+    } finally {
+      setUpdatingCategoryId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-6">
@@ -89,16 +105,51 @@ export default function CategoryManager() {
             </div>
             <div className="space-y-1 max-h-96 overflow-auto">
               {categories.map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color || "#ccc" }} />
-                    <span className="text-sm">{cat.name}</span>
+                <div key={cat.id} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color || "#ccc" }} />
+                      <span className="text-sm font-medium">{cat.name}</span>
+                      {cat.exclude_from_planning && (
+                        <Badge variant="secondary" className="text-[11px]">
+                          Excluded from planning
+                        </Badge>
+                      )}
+                    </div>
+                    {!cat.id.startsWith("cat-") && (
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(cat.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
-                  {!cat.id.startsWith("cat-") && (
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(cat.id)}>
-                      <Trash2 className="h-3 w-3" />
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2">
+                    <div>
+                      <p className="text-xs font-medium text-foreground">
+                        Exclude this category from planning forecasts
+                      </p>
+                      <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                        Future cash-flow planning ignores transactions assigned to this category.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={cat.exclude_from_planning ? "secondary" : "outline"}
+                      size="sm"
+                      disabled={updatingCategoryId === cat.id}
+                      onClick={() => handlePlanningToggle(cat)}
+                      aria-label={
+                        cat.exclude_from_planning
+                          ? `Include ${cat.name} in planning forecasts`
+                          : `Exclude ${cat.name} from planning forecasts`
+                      }
+                    >
+                      {updatingCategoryId === cat.id
+                        ? "Saving..."
+                        : cat.exclude_from_planning
+                          ? "Include"
+                          : "Exclude"}
                     </Button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
