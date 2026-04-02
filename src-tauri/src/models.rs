@@ -188,6 +188,14 @@ pub struct TransactionFilter {
     pub offset: Option<i64>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageInfo {
+    pub profile: String,
+    pub is_default_profile: bool,
+    pub app_data_dir: String,
+    pub db_path: String,
+}
+
 // ═══════════════════════════════════════════
 // Net Worth Models
 // ═══════════════════════════════════════════

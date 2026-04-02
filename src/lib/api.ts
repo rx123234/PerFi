@@ -30,6 +30,7 @@ import type {
   SavingsRatePoint,
   SeasonalPattern,
   SpendingBreakdown,
+  StorageInfo,
   SyncResult,
   Transaction,
   TransactionFilter,
@@ -55,6 +56,10 @@ const invoke = <T>(command: string, args?: InvokeArgs): Promise<T> => {
   }
   return tauriInvoke<T>(command, args);
 };
+
+// System
+export const getStorageInfo = () => invoke<StorageInfo>("get_storage_info");
+export const seedDemoData = () => invoke<void>("seed_demo_data");
 
 // Accounts
 export const getAccounts = () => invoke<Account[]>("get_accounts");

@@ -35,6 +35,38 @@ const navItems = [
   { to: "/accounts", icon: Landmark, label: "Accounts" },
 ];
 
+function PerFiMark({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[1.15rem] border border-white/12 bg-[linear-gradient(180deg,#0d2339_0%,#153455_100%)] shadow-[0_18px_38px_-24px_rgba(10,24,45,0.9)] ${className}`}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_18%,rgba(245,196,92,0.65),transparent_18%),radial-gradient(circle_at_28%_26%,rgba(41,211,145,0.18),transparent_34%)]" />
+      <div className="absolute inset-x-3 bottom-3 top-3 rounded-[0.9rem] border border-white/10 bg-white/3" />
+      <div className="absolute inset-x-5 bottom-[14px] h-[3px] rounded-full bg-white/10" />
+      <div className="absolute inset-x-5 bottom-[26px] h-[3px] rounded-full bg-white/8" />
+      <div className="absolute inset-x-5 bottom-[38px] h-[3px] rounded-full bg-white/7" />
+      <div className="absolute bottom-[14px] left-[18px] w-[9px] rounded-full bg-[var(--chart-2)] h-[16px]" />
+      <div className="absolute bottom-[14px] left-[31px] w-[9px] rounded-full bg-[color:rgba(73,223,182,0.95)] h-[25px]" />
+      <div className="absolute bottom-[14px] left-[44px] w-[9px] rounded-full bg-[color:rgba(121,233,203,0.98)] h-[36px]" />
+      <svg
+        viewBox="0 0 64 64"
+        className="absolute inset-0 h-full w-full"
+        aria-hidden="true"
+      >
+        <path
+          d="M16 43 C24 39, 30 36, 36 31 C41 27, 46 22, 52 16"
+          fill="none"
+          stroke="rgba(255,248,240,0.98)"
+          strokeWidth="4.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M51 16 L46 18 L48.5 23 Z" fill="rgba(255,248,240,0.98)" />
+      </svg>
+    </div>
+  );
+}
+
 export default function Layout() {
   const [theme, setTheme] = useState(getTheme);
 
@@ -49,12 +81,10 @@ export default function Layout() {
       <nav className="sticky top-0 flex h-screen w-[86px] shrink-0 flex-col items-center border-r border-border/80 bg-nav/90 px-3 py-5 backdrop-blur-2xl">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-[linear-gradient(145deg,#5cc8ff,#1f6bff)] text-sm font-bold text-white shadow-[0_18px_34px_-22px_rgba(92,200,255,0.7)]">
-            PF
-          </div>
+          <PerFiMark className="h-11 w-11" />
           <div className="text-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">PerFi</p>
-            <p className="mt-1 text-[10px] text-muted-foreground/70">Wealth OS</p>
+            <p className="mt-1 text-[10px] text-muted-foreground/70">Money clarity</p>
           </div>
         </div>
 
@@ -127,19 +157,22 @@ export default function Layout() {
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-[1380px] px-5 py-5 sm:px-6 lg:px-8">
           <div className="mb-5 flex items-center justify-between rounded-[1.4rem] border border-border/80 bg-container/80 px-5 py-3 backdrop-blur-xl">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Personal Finance</p>
-              <h1 className="mt-1 text-xl font-semibold">Decision workspace</h1>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Personal Finance</p>
+            <h1 className="mt-1 text-xl font-semibold">Decision workspace</h1>
+          </div>
+          <div className="hidden items-center gap-3 md:flex">
+            <div className="rounded-full border border-border/80 bg-surface/70 px-3 py-1 text-xs text-muted-foreground">
+              Local-first
             </div>
-            <div className="hidden items-center gap-3 md:flex">
-              <div className="rounded-full border border-border/80 bg-surface/70 px-3 py-1 text-xs text-muted-foreground">
-                Local-first
-              </div>
-              <div className="rounded-full border border-border/80 bg-surface/70 px-3 py-1 text-xs text-muted-foreground">
-                Tauri + SQLite
-              </div>
+            <div className="rounded-full border border-border/80 bg-surface/70 px-3 py-1 text-xs text-muted-foreground">
+              No subscription required
+            </div>
+            <div className="rounded-full border border-border/80 bg-surface/70 px-3 py-1 text-xs text-muted-foreground">
+              Tauri + SQLite
             </div>
           </div>
+        </div>
           <Outlet />
         </div>
       </main>

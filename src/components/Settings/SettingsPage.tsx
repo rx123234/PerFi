@@ -3,10 +3,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import TellerSettings from "./TellerSettings";
 import CategoryManager from "../Categories/CategoryManager";
 import CsvImport from "../Import/CsvImport";
+import { Button } from "@/components/ui/button";
 import { Sun, Moon, Database, ShieldCheck, Tags, Upload } from "lucide-react";
 import { getTheme, toggleTheme } from "@/lib/theme";
 import * as api from "@/lib/api";
-import type { Account, TellerConfigMeta, Category, CategoryRule } from "@/lib/types";
+import type { Account, TellerConfigMeta, Category, CategoryRule, StorageInfo } from "@/lib/types";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState("general");
@@ -15,29 +16,54 @@ export default function SettingsPage() {
   const [teller, setTeller] = useState<TellerConfigMeta | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [rules, setRules] = useState<CategoryRule[]>([]);
+  const [storage, setStorage] = useState<StorageInfo | null>(null);
+  const [seedError, setSeedError] = useState<string | null>(null);
+  const [seedSuccess, setSeedSuccess] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const handleThemeToggle = () => {
     const next = toggleTheme();
     setTheme(next);
   };
 
-  useEffect(() => {
+  const loadSummary = () => {
     Promise.all([
       api.getAccounts(),
       api.getTellerConfig(),
       api.getCategories(),
       api.getCategoryRules(),
+      api.getStorageInfo(),
     ])
-      .then(([loadedAccounts, tellerMeta, loadedCategories, loadedRules]) => {
+      .then(([loadedAccounts, tellerMeta, loadedCategories, loadedRules, storageInfo]) => {
         setAccounts(loadedAccounts);
         setTeller(tellerMeta);
         setCategories(loadedCategories);
         setRules(loadedRules);
+        setStorage(storageInfo);
       })
       .catch((err) => {
         console.error("Failed to load settings summary:", err);
       });
+  };
+
+  useEffect(() => {
+    loadSummary();
   }, []);
+
+  const handleSeedDemoData = async () => {
+    setSeedError(null);
+    setSeedSuccess(null);
+    setIsSeeding(true);
+    try {
+      await api.seedDemoData();
+      await loadSummary();
+      setSeedSuccess("Demo data loaded into this non-default profile.");
+    } catch (err) {
+      setSeedError(err instanceof Error ? err.message : "Failed to seed demo data");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const connectedAccounts = accounts.filter((account) => account.source === "teller").length;
   const manualAccounts = accounts.length - connectedAccounts;
@@ -140,6 +166,59 @@ export default function SettingsPage() {
                   </>
                 )}
               </button>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2">
+                  <p className="font-medium">Workspace Data</p>
+                  <p className="text-sm text-muted-foreground">
+                    PerFi stores data locally by profile. Your default profile keeps live data isolated; screenshot data
+                    should live in a separate profile.
+                  </p>
+                </div>
+                {!storage?.is_default_profile ? (
+                  <Button onClick={handleSeedDemoData} disabled={isSeeding}>
+                    {isSeeding ? "Seeding Demo Data..." : "Seed Demo Data"}
+                  </Button>
+                ) : null}
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-border/70 bg-background/60 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Current Profile</p>
+                  <p className="mt-2 text-sm font-medium">{storage?.profile ?? "Loading..."}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {storage?.is_default_profile
+                      ? "This is the live default profile. No demo seeding is allowed here."
+                      : "This is an isolated profile. Demo data can be safely loaded here."}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/60 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Launch A Screenshot Profile</p>
+                  <p className="mt-2 text-sm font-medium font-mono">perfi.exe --profile screenshots</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Launch that secondary profile once, then return here and use <span className="font-medium text-foreground">Seed Demo Data</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-dashed border-border/70 bg-background/40 p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Storage Paths</p>
+                <p className="mt-2 break-all font-mono text-xs text-muted-foreground">
+                  DB: {storage?.db_path ?? "Loading..."}
+                </p>
+                <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                  App data: {storage?.app_data_dir ?? "Loading..."}
+                </p>
+              </div>
+
+              {seedError ? (
+                <p className="text-sm text-destructive">{seedError}</p>
+              ) : null}
+              {seedSuccess ? (
+                <p className="text-sm text-emerald-600 dark:text-emerald-400">{seedSuccess}</p>
+              ) : null}
             </div>
 
             <div className="rounded-xl border border-border bg-card p-4">

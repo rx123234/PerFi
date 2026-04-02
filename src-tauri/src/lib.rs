@@ -5,7 +5,7 @@ mod import;
 mod models;
 mod planning;
 
-use db::DbState;
+use db::{DbState, StorageState};
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -15,15 +15,22 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            let storage_info = db::get_storage_info(&app.handle())
+                .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
             let db_path = db::get_db_path(&app.handle())
                 .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
             let conn = db::initialize(&db_path)
                 .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
             app.manage(DbState(Mutex::new(conn)));
+            app.manage(StorageState(storage_info.clone()));
             eprintln!("PerFi database initialized at {:?}", db_path);
+            eprintln!("PerFi profile: {}", storage_info.profile);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // System
+            commands::system::get_storage_info,
+            commands::system::seed_demo_data,
             // Accounts
             commands::accounts::get_accounts,
             commands::accounts::create_account,

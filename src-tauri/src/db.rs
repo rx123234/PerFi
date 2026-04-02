@@ -6,15 +6,83 @@ use tauri::AppHandle;
 use tauri::Manager;
 
 pub struct DbState(pub Mutex<Connection>);
+pub struct StorageState(pub crate::models::StorageInfo);
 
 const KEYRING_SERVICE: &str = "com.perfi.app";
 const KEYRING_DB_KEY: &str = "db-encryption-key";
 
-pub fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_dir = app
+fn sanitize_profile_name(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let mut slug = String::new();
+    let mut last_was_dash = false;
+    for ch in trimmed.chars() {
+        let normalized = ch.to_ascii_lowercase();
+        if normalized.is_ascii_alphanumeric() {
+            slug.push(normalized);
+            last_was_dash = false;
+        } else if matches!(normalized, '-' | '_' | ' ') && !last_was_dash {
+            slug.push('-');
+            last_was_dash = true;
+        }
+    }
+
+    let slug = slug.trim_matches('-').to_string();
+    if slug.is_empty() { None } else { Some(slug) }
+}
+
+fn requested_profile() -> Option<String> {
+    if let Ok(profile) = std::env::var("PERFI_PROFILE") {
+        if let Some(slug) = sanitize_profile_name(&profile) {
+            return Some(slug);
+        }
+    }
+
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        if let Some(value) = arg.strip_prefix("--profile=") {
+            if let Some(slug) = sanitize_profile_name(value) {
+                return Some(slug);
+            }
+        }
+        if arg == "--profile" {
+            if let Some(value) = args.next() {
+                if let Some(slug) = sanitize_profile_name(&value) {
+                    return Some(slug);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+pub fn get_storage_info(app: &AppHandle) -> Result<crate::models::StorageInfo, String> {
+    let base_dir = app
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+
+    let profile = requested_profile();
+    let (profile_name, is_default_profile, app_data_dir) = match profile {
+        Some(slug) => (slug.clone(), false, base_dir.join("profiles").join(slug)),
+        None => ("default".to_string(), true, base_dir),
+    };
+
+    Ok(crate::models::StorageInfo {
+        profile: profile_name,
+        is_default_profile,
+        db_path: app_data_dir.join("perfi.db").to_string_lossy().to_string(),
+        app_data_dir: app_data_dir.to_string_lossy().to_string(),
+    })
+}
+
+pub fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let storage = get_storage_info(app)?;
+    let app_dir = PathBuf::from(&storage.app_data_dir);
     fs::create_dir_all(&app_dir)
         .map_err(|e| format!("Failed to create app data dir: {}", e))?;
     Ok(app_dir.join("perfi.db"))
@@ -212,8 +280,22 @@ pub fn delete_secret(key: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::run_migrations;
+    use super::{run_migrations, sanitize_profile_name};
     use rusqlite::Connection;
+
+    #[test]
+    fn sanitize_profile_name_normalizes_readable_slugs() {
+        assert_eq!(sanitize_profile_name("Screenshots"), Some("screenshots".to_string()));
+        assert_eq!(sanitize_profile_name("Investor Deck 2026"), Some("investor-deck-2026".to_string()));
+        assert_eq!(sanitize_profile_name("qa_sandbox"), Some("qa-sandbox".to_string()));
+    }
+
+    #[test]
+    fn sanitize_profile_name_rejects_empty_values() {
+        assert_eq!(sanitize_profile_name(""), None);
+        assert_eq!(sanitize_profile_name("   "), None);
+        assert_eq!(sanitize_profile_name("---"), None);
+    }
 
     #[test]
     fn planning_exclusion_migration_adds_columns_with_default_zero() {

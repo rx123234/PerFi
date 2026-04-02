@@ -99,6 +99,13 @@ export interface AccountBalance {
   mask: string | null;
 }
 
+export interface StorageInfo {
+  profile: string;
+  is_default_profile: boolean;
+  app_data_dir: string;
+  db_path: string;
+}
+
 export interface ImportResult {
   imported: number;
   duplicates: number;

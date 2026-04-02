@@ -9,5 +9,6 @@ pub mod insights;
 pub mod investment_import;
 pub mod net_worth;
 pub mod retirement;
+pub mod system;
 pub mod teller;
 pub mod transactions;

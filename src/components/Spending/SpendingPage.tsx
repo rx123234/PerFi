@@ -39,8 +39,52 @@ const TOOLTIP_STYLE = {
   fontSize: "13px",
 } as const;
 
-const TOOLTIP_LABEL_STYLE = { color: "var(--popover-foreground)" } as const;
-const TOOLTIP_ITEM_STYLE = { color: "var(--popover-foreground)" } as const;
+interface TooltipRow {
+  color?: string;
+  dataKey?: string;
+  name?: string;
+  value?: number | string;
+}
+
+interface SpendingTooltipProps {
+  active?: boolean;
+  label?: string;
+  payload?: TooltipRow[];
+}
+
+function SpendingTooltip({ active, label, payload }: SpendingTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const rows = payload.filter((item) => Number(item.value ?? 0) > 0);
+  if (rows.length === 0) return null;
+
+  return (
+    <div
+      style={TOOLTIP_STYLE}
+      className="min-w-[180px] shadow-[0_12px_30px_-18px_rgba(0,0,0,0.65)]"
+    >
+      <div className="border-b border-border/80 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="space-y-2 px-3 py-3">
+        {rows.map((item) => (
+          <div key={item.dataKey ?? item.name} className="flex items-center justify-between gap-4 text-sm">
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: item.color || "var(--chart-1)" }}
+              />
+              <span className="truncate text-foreground">{item.name}</span>
+            </div>
+            <span className="shrink-0 font-medium tabular-nums text-foreground">
+              {formatCurrency(Number(item.value ?? 0))}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const TRAILING_OPTIONS: { label: string; months: number }[] = [
   { label: "3M", months: 3 },
@@ -103,10 +147,7 @@ function OverviewChart({ breakdown }: OverviewChartProps) {
                 width={52}
               />
               <Tooltip
-                formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                contentStyle={TOOLTIP_STYLE}
-                labelStyle={TOOLTIP_LABEL_STYLE}
-                itemStyle={TOOLTIP_ITEM_STYLE}
+                content={<SpendingTooltip />}
                 cursor={{ fill: "var(--muted-foreground)", opacity: 0.08 }}
               />
               {breakdown.categories.map((cat) => (
@@ -181,8 +222,7 @@ function CategoryTrends({ breakdown }: CategoryTrendsProps) {
                       width={44}
                     />
                     <Tooltip
-                      formatter={(value) => [formatCurrency(Number(value)), cat.name]}
-                      contentStyle={TOOLTIP_STYLE}
+                      content={<SpendingTooltip />}
                       cursor={{ fill: "var(--muted-foreground)", opacity: 0.08 }}
                     />
                     <Bar dataKey="amount" radius={[3, 3, 0, 0]}>
