@@ -1,0 +1,105 @@
+name: Bug report
+description: Report a defect, regression, crash, or incorrect behavior in PerFi.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. PerFi is still a work in progress, so concrete reproduction details help a lot.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem clearly and concretely.
+      placeholder: The forecast page shows duplicate bills after importing a CSV...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      placeholder: I expected each recurring bill to appear only once.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the shortest reliable steps.
+      placeholder: |
+        1. Open PerFi
+        2. Go to Settings > Import
+        3. Import ...
+        4. Open Forecast
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Dashboard / Home
+        - Transactions
+        - Spending
+        - Budget
+        - Fixed Costs
+        - Money Flow
+        - Net Worth
+        - Goals
+        - Retirement
+        - Forecast
+        - Insights
+        - Accounts
+        - Settings
+        - Import / CSV
+        - Teller / Sync
+        - Investment Import
+        - Build / Packaging
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data_context
+    attributes:
+      label: Data context
+      description: What kind of dataset were you using?
+      options:
+        - Real data in default profile
+        - Demo / screenshot profile
+        - Manual test data
+        - Teller synced data
+        - CSV import data
+        - Investment import data
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / environment
+      placeholder: Windows 11, macOS 15, Ubuntu 24.04...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+      description: If known, include the release version or Git commit SHA.
+      placeholder: 0.1.0 or 4ad3a14
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or extra context
+      description: Paste logs or drag screenshots here if they help explain the issue.
+      placeholder: Paste any errors, stack traces, or screenshots here.
+

@@ -1,0 +1,74 @@
+name: Data / import issue
+description: Report problems with CSV imports, transaction mapping, duplicate handling, categorization, or imported balances.
+title: "[Data]: "
+labels:
+  - data
+  - import
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for issues involving imported or synced financial data.
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source type
+      options:
+        - CSV import
+        - Teller sync
+        - Investment CSV
+        - Investment statement / PDF import
+        - Manual entry
+        - Mixed / multiple sources
+    validations:
+      required: true
+
+  - type: input
+    id: institution
+    attributes:
+      label: Institution or file source
+      placeholder: Chase, Fidelity, AmEx, custom CSV export...
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is wrong with the data?
+      placeholder: Amount signs are inverted, duplicate transactions were imported, categories are wrong...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should PerFi have done instead?
+      placeholder: Imported debits as spending, recognized duplicates, mapped merchant names correctly...
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Safe sample rows or field structure
+      description: Please redact any private details before sharing.
+      placeholder: |
+        Date, Description, Amount
+        2026-03-01, PAYROLL, 4900.00
+        2026-03-02, WHOLE FOODS, -86.42
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Quick checks
+      options:
+        - label: I removed or redacted any sensitive personal financial information.
+          required: true
+        - label: I included enough detail to reproduce the parsing or mapping issue.
+          required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context
+      description: Include screenshots, logs, or notes about category rules, account type, or profile context.
+

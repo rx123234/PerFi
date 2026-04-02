@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+contact_links:
+  - name: PerFi Discussions
+    url: https://github.com/rx123234/PerFi/discussions
+    about: Use Discussions for open-ended questions, feedback, and product ideas that are not yet actionable issues.
+

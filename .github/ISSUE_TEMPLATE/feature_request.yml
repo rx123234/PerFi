@@ -1,0 +1,74 @@
+name: Feature request
+description: Suggest a product, workflow, or UX improvement for PerFi.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        PerFi is trying to make personal finance easier and more accessible. Frame requests around the user problem first.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      placeholder: I need a clearer way to separate one-off expenses from recurring cash-flow planning...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like PerFi to do?
+      placeholder: Add a planning exclusion toggle directly in the transaction row...
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is this valuable?
+      placeholder: This would make forecasts more trustworthy and reduce cleanup work after imports.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Dashboard / Home
+        - Transactions
+        - Spending
+        - Budget
+        - Fixed Costs
+        - Money Flow
+        - Net Worth
+        - Goals
+        - Retirement
+        - Forecast
+        - Insights
+        - Accounts
+        - Settings
+        - Import / CSV
+        - Teller / Sync
+        - Investment Import
+        - Open source / contributor workflow
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional, but useful if you thought about other ways to solve it.
+      placeholder: I currently work around this by...
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Mockups, references, or examples
+      description: Optional screenshots, links, or examples from other tools.
+
