@@ -27,7 +27,18 @@ function ChangeIndicator({ current, previous }: { current: number; previous: num
 }
 
 export default function CashFlowCards({ data }: Props) {
-  if (!data) return null;
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Cash flow</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Cash flow cards appear once PerFi can see at least one reporting period of income and spending.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const cards = [
     { title: "Income", value: data.income, prev: data.prev_income, color: "text-success", accent: "rgba(46,204,113,0.16)" },

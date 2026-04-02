@@ -21,7 +21,8 @@ function RouteFallback() {
     <div className="flex min-h-[40vh] items-center justify-center">
       <div className="flex flex-col items-center gap-2">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <p className="text-sm font-medium text-foreground">Loading your workspace...</p>
+        <p className="text-xs text-muted-foreground">Preparing accounts, plans, and recent activity.</p>
       </div>
     </div>
   );

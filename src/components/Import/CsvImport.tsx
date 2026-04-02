@@ -66,6 +66,17 @@ export default function CsvImport() {
 
   return (
     <div className="space-y-4">
+      <Card className="border-border/80 bg-panel/80 backdrop-blur-xl">
+        <CardContent className="p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Manual Import</p>
+          <h3 className="mt-2 text-lg font-semibold">Review the mapping before you import a full statement.</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Imports add transactions into the account you choose below. Preview first, confirm the date and amount
+            columns look right, then import. Existing duplicates are skipped automatically when detected.
+          </p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-6 space-y-4">
           <div>
@@ -120,9 +131,38 @@ export default function CsvImport() {
             </div>
           )}
 
+          {(selectedAccount || selectedFormat || filePath) && (
+            <div className="rounded-xl border border-border/70 bg-background/60 p-4">
+              <p className="text-xs font-medium text-muted-foreground">Import checklist</p>
+              <div className="mt-3 grid gap-2 md:grid-cols-3 text-sm">
+                <div className="rounded-lg border border-border/70 px-3 py-2">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Account</p>
+                  <p className="mt-1 font-medium">
+                    {selectedAccount
+                      ? accounts.find((account) => account.id === selectedAccount)?.name ?? "Selected"
+                      : "Choose where transactions belong"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/70 px-3 py-2">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Format</p>
+                  <p className="mt-1 font-medium">{selectedFormat || "Choose a bank format"}</p>
+                </div>
+                <div className="rounded-lg border border-border/70 px-3 py-2">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">File</p>
+                  <p className="mt-1 font-medium">
+                    {filePath ? filePath.split("/").pop() || filePath.split("\\").pop() : "Choose a CSV file"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {preview && (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Preview (first 10 rows)</label>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Sanity-check dates, descriptions, and amounts here before importing. Duplicates are skipped during import.
+              </p>
               <div className="border border-border rounded-lg overflow-auto max-h-64">
                 <table className="w-full text-sm">
                   <thead>
@@ -162,6 +202,10 @@ export default function CsvImport() {
                 {result.errors.length > 0 && (
                   <p className="text-destructive">{result.errors.length} errors</p>
                 )}
+                <div className="mt-3 rounded-lg border border-success/20 bg-background/70 p-3 text-xs text-muted-foreground">
+                  Next steps: review the imported account, spot-check categorization, then return to Home or Forecast to
+                  see the new data reflected.
+                </div>
               </div>
             </div>
           )}

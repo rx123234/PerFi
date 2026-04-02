@@ -15,7 +15,10 @@ export default function TopMerchants({ data }: Props) {
           <CardTitle className="text-sm font-medium">Top Merchants</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm">No merchant data for this period</p>
+          <p className="text-muted-foreground text-sm leading-6">
+            Merchant concentration appears after transactions are imported and grouped. This is useful for spotting
+            subscriptions, rent, and spend concentration fast.
+          </p>
         </CardContent>
       </Card>
     );

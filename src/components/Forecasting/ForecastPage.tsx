@@ -54,6 +54,51 @@ function formatShortDate(dateStr: string): string {
   }
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getConfidenceLabel(confidence: number): string {
+  if (confidence >= 0.8) return "High confidence";
+  if (confidence >= 0.6) return "Moderate confidence";
+  return "Lower confidence";
+}
+
+function getForecastReasons(point: ForecastPoint): string[] {
+  const spreadWidth = Math.max(0, point.net_p90 - point.net_p10);
+  const cashFlowScale = Math.max(point.projected_income + point.projected_spending, 1);
+  const spreadRatio = spreadWidth / cashFlowScale;
+  const reasons: string[] = [];
+
+  if (point.confidence >= 0.8) {
+    reasons.push("Recurring cash flow looks consistent.");
+  } else if (point.confidence < 0.55) {
+    reasons.push("Forecast has limited history or more volatile patterns.");
+  }
+
+  if (spreadRatio <= 0.18) {
+    reasons.push("Scenario range is relatively tight.");
+  } else if (spreadRatio >= 0.35) {
+    reasons.push("Scenario range is wide, so downside risk matters.");
+  }
+
+  if (point.net_p10 < 0 && point.projected_net >= 0) {
+    reasons.push("Expected net is positive, but weak months can still dip below zero.");
+  } else if (point.projected_net < 0) {
+    reasons.push("Projected spending is outrunning projected income.");
+  }
+
+  if (reasons.length === 0) {
+    reasons.push("Projection is stable enough to use as a planning baseline.");
+  }
+
+  return reasons.slice(0, 3);
+}
+
+function getProjectedBillsTotal(bills: UpcomingBill[]): number {
+  return bills.reduce((sum, bill) => sum + bill.expected_amount, 0);
+}
+
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 
 interface ForecastTooltipProps {
@@ -122,6 +167,135 @@ function ForecastTooltip({ active, payload, label }: ForecastTooltipProps) {
         </div>
       )}
     </div>
+  );
+}
+
+function ForecastSummarySection({
+  data,
+  bills,
+}: {
+  data: ForecastPoint[];
+  bills: UpcomingBill[];
+}) {
+  const nextMonth = data[0];
+
+  if (!nextMonth) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">How this forecast works</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Forecast needs recent income and spending history before it can explain the next month.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const scheduledBills = getProjectedBillsTotal(bills);
+  const flexibleSpending = Math.max(0, nextMonth.projected_spending - scheduledBills);
+  const confidenceReasons = getForecastReasons(nextMonth);
+  const likelyFloor = nextMonth.net_p10;
+  const likelyCeiling = nextMonth.net_p90;
+  const billCoverage = nextMonth.projected_income - scheduledBills;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-sm font-semibold">Next-Month Breakdown</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatMonthLabel(nextMonth.month)} forecast split into recurring obligations and flexible cash flow.
+            </p>
+          </div>
+          <div className="rounded-full border border-border/80 bg-surface/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+            {getConfidenceLabel(nextMonth.confidence)}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-2xl border border-border/70 bg-background/55 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Income</p>
+            <p className="mt-2 text-xl font-semibold tabular-nums text-emerald-600">
+              {formatCurrency(nextMonth.projected_income)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Projected inflow for the month</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-background/55 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Scheduled Bills</p>
+            <p className="mt-2 text-xl font-semibold tabular-nums text-red-500">
+              {formatCurrency(scheduledBills)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Recurring bills expected within 30 days</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-background/55 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Flexible Spend</p>
+            <p className="mt-2 text-xl font-semibold tabular-nums">{formatCurrency(flexibleSpending)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Projected non-bill spending pressure</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-background/55 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Projected Net</p>
+            <p
+              className={cn(
+                "mt-2 text-xl font-semibold tabular-nums",
+                nextMonth.projected_net >= 0 ? "text-emerald-600" : "text-red-500"
+              )}
+            >
+              {formatCurrency(nextMonth.projected_net)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">After recurring and flexible outflow</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-2xl border border-border/70 bg-surface/65 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Likely range
+            </p>
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Likely floor</span>
+                <span className="font-medium tabular-nums">{formatCurrency(likelyFloor)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Likely ceiling</span>
+                <span className="font-medium tabular-nums">{formatCurrency(likelyCeiling)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 border-t border-border pt-2">
+                <span className="text-muted-foreground">Income after bills</span>
+                <span className={cn("font-medium tabular-nums", billCoverage >= 0 ? "text-foreground" : "text-red-500")}>
+                  {formatCurrency(billCoverage)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-surface/65 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Why confidence looks like this
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {confidenceReasons.map((reason) => (
+                <span
+                  key={reason}
+                  className="rounded-full border border-border/80 bg-background/70 px-3 py-1.5 text-xs text-foreground"
+                >
+                  {reason}
+                </span>
+              ))}
+            </div>
+            <p className="mt-4 text-xs leading-5 text-muted-foreground">
+              Scheduled bills are estimated from recurring charges in the last several months. Flexible spending is the
+              remaining projected outflow after those bills are accounted for.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -600,6 +774,8 @@ export default function ForecastPage() {
   const [seasonal, setSeasonal] = useState<SeasonalPattern[]>([]);
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [loading, setLoading] = useState(true);
+  const nextMonthConfidence = forecastData[0]?.confidence ?? 0;
+  const headerTone = clamp(nextMonthConfidence, 0, 1);
 
   useEffect(() => {
     async function loadAll() {
@@ -626,9 +802,30 @@ export default function ForecastPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Forecast</h2>
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div
+          className="rounded-[1.8rem] border border-border/80 px-6 py-6 shadow-[0_20px_50px_-34px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+          style={{
+            background: `linear-gradient(135deg, rgba(92,200,255,${0.14 + headerTone * 0.08}), rgba(9,17,29,0.08) 40%, rgba(240,180,41,0.08) 100%)`,
+          }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">Forecast</p>
+          <h2 className="mt-3 text-3xl font-semibold">Plan around expected cash flow, not guesswork.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+            PerFi estimates recurring income, recurring bills, and flexible spending pressure from your history, then
+            shows a likely range instead of pretending the future is exact.
+          </p>
+        </div>
+        <div className="rounded-[1.8rem] border border-border/80 bg-panel/80 px-5 py-5 backdrop-blur-xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+            Trust notes
+          </p>
+          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <p>Forecast is estimated, not actual. Use the range, not just the midpoint.</p>
+            <p>Recurring bills come from recent cadence detection and will improve as more history arrives.</p>
+            <p>Best results come from clean categories, stable account imports, and confirmed recurring cash flow.</p>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -640,7 +837,7 @@ export default function ForecastPage() {
         </div>
       ) : (
         <>
-          {/* Section 1: Cash Flow Projection */}
+          <ForecastSummarySection data={forecastData} bills={bills} />
           <CashFlowSection data={forecastData} />
 
           {/* Section 2+3: Bills + Seasonal side by side */}

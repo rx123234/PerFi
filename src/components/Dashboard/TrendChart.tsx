@@ -50,7 +50,10 @@ export default function TrendChart({ data, onGranularityChange, granularity }: P
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No trend data for this period</p>
+          <p className="text-muted-foreground text-sm leading-6">
+            Trend data needs multiple periods of history. Once enough activity is loaded, this chart will show whether
+            income and spending are stabilizing or drifting.
+          </p>
         ) : (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
