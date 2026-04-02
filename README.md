@@ -23,6 +23,56 @@ PerFi is:
 
 Some areas are already useful today, while others are still rough, evolving, or being actively redesigned. Expect incomplete workflows, changing data models, and occasional sharp edges.
 
+## Screenshots
+
+These screenshots use the isolated demo profile with fake data so real financial data stays separate.
+
+### Dashboard and Analysis
+
+<p align="center">
+  <img src="docs/readme-assets/01-home-dashboard.png" alt="PerFi home dashboard" width="48%" />
+  <img src="docs/readme-assets/03-spending.png" alt="PerFi spending analysis" width="48%" />
+</p>
+<p align="center">
+  <img src="docs/readme-assets/06-money-flow.png" alt="PerFi money flow view" width="48%" />
+  <img src="docs/readme-assets/10-forecast.png" alt="PerFi forecast view" width="48%" />
+</p>
+
+### Planning and Wealth
+
+<p align="center">
+  <img src="docs/readme-assets/04-budget.png" alt="PerFi budget page" width="48%" />
+  <img src="docs/readme-assets/07-net-worth.png" alt="PerFi net worth page" width="48%" />
+</p>
+<p align="center">
+  <img src="docs/readme-assets/08-goals.png" alt="PerFi goals page" width="48%" />
+  <img src="docs/readme-assets/09-retirement.png" alt="PerFi retirement planning page" width="48%" />
+</p>
+
+### Operations and Setup
+
+<p align="center">
+  <img src="docs/readme-assets/02-transactions.png" alt="PerFi transactions page" width="48%" />
+  <img src="docs/readme-assets/05-fixed-costs.png" alt="PerFi fixed costs page" width="48%" />
+</p>
+<p align="center">
+  <img src="docs/readme-assets/12-accounts.png" alt="PerFi accounts page" width="48%" />
+  <img src="docs/readme-assets/11-insights.png" alt="PerFi insights page" width="48%" />
+</p>
+
+<details>
+  <summary>Full screenshot gallery</summary>
+
+  <p align="center">
+    <img src="docs/readme-assets/13-settings-general.png" alt="PerFi settings general tab" width="48%" />
+    <img src="docs/readme-assets/14-settings-categories.png" alt="PerFi settings categories tab" width="48%" />
+  </p>
+  <p align="center">
+    <img src="docs/readme-assets/15-settings-import.png" alt="PerFi settings import tab" width="48%" />
+  </p>
+
+</details>
+
 ## What PerFi Does Today
 
 ### Core Money Tracking

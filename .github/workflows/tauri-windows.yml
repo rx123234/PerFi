@@ -19,19 +19,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.3
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: pnpm
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build packaged app
-        run: npm run tauri build
+        run: pnpm tauri build
 
       - name: Upload packaged exe
         uses: actions/upload-artifact@v4
